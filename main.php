@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" type="image/png" href="Screenshot_2025-05-01_at_11.42.04_PM-removebg.png" />
   <title>Mura</title>
   
   <style>
