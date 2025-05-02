@@ -3,9 +3,18 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   text-align: center;
-  padding: 30px;
+  padding: 30px 15px; /* Added horizontal padding */
   background-image: radial-gradient(circle at 50% 50%, #2a1745 0%, #1f1235 100%);
   margin: 0;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  width: 100%;
+  max-width: 100%; /* Ensure content doesn't exceed viewport width */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 :root {
@@ -22,18 +31,20 @@ body {
 }
 
 .game-screen {
+  width: 100%;
   max-width: 700px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 15px; /* Adjusted padding */
   background-color: rgba(60, 22, 66, 0.9);
   border-radius: 20px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
   position: relative;
   border: 3px solid var(--primary-color);
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 h2 {
-  font-size: 2.2rem;
+  font-size: clamp(1.5rem, 5vw, 2.2rem); /* Responsive font size */
   font-weight: 900;
   color: white;
   letter-spacing: 2px;
@@ -42,6 +53,7 @@ h2 {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: 0 2px 10px rgba(157, 78, 221, 0.3);
+  word-wrap: break-word; /* Ensure text wraps */
 }
 
 h3 {
@@ -49,6 +61,7 @@ h3 {
   color: white;
   text-shadow: 1px 1px 2px #000;
   margin-top: 20px;
+  word-wrap: break-word; /* Ensure text wraps */
 }
 
 h4 {
@@ -56,6 +69,7 @@ h4 {
   color: var(--text-muted);
   margin-top: 10px;
   margin-bottom: 15px;
+  word-wrap: break-word; /* Ensure text wraps */
 }
 
 .health {
@@ -98,7 +112,9 @@ h4 {
   transition: all 0.3s ease;
   font-weight: 600;
   min-width: 120px;
+  max-width: 100%; /* Ensure buttons don't overflow */
   box-shadow: 0 4px 10px rgba(157, 78, 221, 0.3);
+  white-space: normal; /* Allow text to wrap in buttons */
 }
 
 .option:hover {
@@ -112,6 +128,8 @@ h4 {
   font-weight: bold;
   min-height: 30px;
   color: var(--primary-color-light);
+  word-wrap: break-word; /* Ensure text wraps */
+  max-width: 100%; /* Contain within parent */
 }
 
 #battle-area {
@@ -122,10 +140,12 @@ h4 {
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 30px;
+  padding: 30px 15px; /* Adjusted padding */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(6px);
   position: relative;
+  width: 100%;
+  overflow: hidden; /* Prevent content overflow */
 }
 
 #battle-area::before {
@@ -142,6 +162,7 @@ h4 {
 
 .character {
   max-height: 180px;
+  max-width: 40%; /* Limit width to prevent overflow */
   margin: 10px;
   transition: transform 0.5s ease-in-out;
   filter: drop-shadow(0 0 10px rgba(157, 78, 221, 0.5));
@@ -161,23 +182,27 @@ h4 {
 
 #question-area {
   margin-top: 30px;
+  width: 100%;
 }
 
 .parchment {
   background-color: var(--form-background);
   color: var(--text-color);
-  padding: 20px;
+  padding: 20px 15px; /* Adjusted padding */
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   position: relative;
   border: 1px solid var(--primary-color);
   backdrop-filter: blur(6px);
+  width: 100%;
+  word-wrap: break-word; /* Ensure text wraps */
 }
 
 #question {
   font-weight: bold;
   font-size: 1.2em;
   margin-bottom: 15px;
+  word-wrap: break-word; /* Ensure text wraps */
 }
 
 .heart-lost {
@@ -255,12 +280,14 @@ h4 {
 /* Footer styling */
 footer {
   width: 100%;
-  padding: 30px 20px;
+  padding: 30px 15px; /* Adjusted padding */
   background-color: rgba(0, 0, 0, 0.2);
   margin-top: 50px;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 .footer-content {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
@@ -270,10 +297,11 @@ footer {
 
 .footer-links {
   display: flex;
-  gap: 30px;
+  gap: 15px; /* Reduced gap */
   margin-bottom: 20px;
   flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
 }
 
 .footer-links a {
@@ -281,6 +309,7 @@ footer {
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.3s ease;
+  padding: 5px;
 }
 
 .footer-links a:hover {
@@ -290,23 +319,27 @@ footer {
 .footer-copyright {
   color: var(--text-muted);
   font-size: 0.8rem;
+  word-wrap: break-word; /* Ensure text wraps */
+  width: 100%;
 }
 
 /* Header styling */
 header {
   width: 100%;
-  padding: 20px 40px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background-color: rgba(0, 0, 0, 0.2);
   margin-bottom: 30px;
+  flex-wrap: wrap; /* Allow wrapping */
 }
 
 .logo-title {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap; /* Allow wrapping */
 }
 
 .logo {
@@ -319,11 +352,13 @@ header {
   font-size: 2rem;
   font-weight: bold;
   color: white;
+  flex-shrink: 0; /* Prevent logo from shrinking */
 }
 
 .game-logo {
   height: 60px;
   width: auto;
+  max-width: 100%; /* Ensure logo doesn't overflow */
 }
 
 /* Responsive styles */
@@ -336,10 +371,23 @@ header {
     flex-direction: column;
     gap: 20px;
     text-align: center;
+    padding: 15px 10px; /* Reduced padding */
   }
   
   .logo-title {
     justify-content: center;
+  }
+
+  body {
+    padding: 15px 10px; /* Reduced padding */
+  }
+
+  .game-screen {
+    padding: 15px 10px; /* Reduced padding */
+  }
+
+  .character {
+    max-width: 80%; /* Larger on mobile */
   }
 }
 
@@ -347,5 +395,19 @@ header {
   .option {
     width: 100%;
     margin: 5px 0;
+    min-width: unset; /* Remove min-width on small screens */
+  }
+
+  h2 {
+    font-size: clamp(1.3rem, 4vw, 1.8rem); /* Smaller font on small screens */
+  }
+
+  .footer-links {
+    gap: 10px;
+    flex-direction: column; /* Stack links on very small screens */
+  }
+  
+  .footer-links a {
+    width: 100%;
   }
 }
