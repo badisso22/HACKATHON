@@ -13,13 +13,17 @@ const battleArea = document.getElementById("battle-area")
 const playerHearts = document.getElementById("player-hearts")
 const enemyHearts = document.getElementById("enemy-hearts")
 const logElement = document.getElementById("log")
+const leaveButton = document.getElementById("leave-game")
+const leaveModal = document.getElementById("leave-modal")
+const confirmLeave = document.getElementById("confirm-leave")
+const cancelLeave = document.getElementById("cancel-leave")
 
-// Enemy data with updated theme
+// Enemy data with updated theme and emojis
 const bosses = [
   {
     name: "Novice Scholar",
     hp: 3,
-    img: "https://i.imgur.com/3vc49fQ.png", // Purple scholar character
+    emoji: "🧙‍♂️", // Wizard emoji
     question: "Translate: 'Apple'",
     correct: "Manzana",
     options: ["Manzana", "Banana", "Pera"],
@@ -27,7 +31,7 @@ const bosses = [
   {
     name: "Language Master",
     hp: 4,
-    img: "https://i.imgur.com/GHXiQmr.png", // Mage character with purple theme
+    emoji: "🐉", // Dragon emoji
     question: "Translate: 'Dog'",
     correct: "Perro",
     options: ["Perro", "Gato", "Caballo"],
@@ -35,7 +39,7 @@ const bosses = [
   {
     name: "Word Wizard",
     hp: 5,
-    img: "https://i.imgur.com/esfHP2L.png", // Wizard character with purple theme
+    emoji: "🧛", // Vampire emoji
     question: "Translate: 'House'",
     correct: "Casa",
     options: ["Casa", "Carro", "Puerta"],
@@ -43,17 +47,15 @@ const bosses = [
   {
     name: "Linguistics Professor",
     hp: 5,
-    img: "https://i.imgur.com/LuLV8eL.png", // Professor character
+    emoji: "🧙‍♂️", // Wizard emoji
     question: "Translate: 'Book'",
     correct: "Libro",
     options: ["Libro", "Papel", "Lápiz"],
   },
 ]
 
-// Player characters
-const playerCharacters = [
-  "https://i.imgur.com/NLRi5Ob.png", // Student character with purple theme
-]
+// Player character emoji - Knight
+const playerEmoji = "🤺" // Knight emoji
 
 // Initialize the game
 function initGame() {
@@ -63,8 +65,8 @@ function initGame() {
   level = 0
   score = 0
 
-  // Set player character
-  document.getElementById("player-img").src = playerCharacters[0]
+  // Set player character emoji - always knight
+  document.getElementById("player-emoji").textContent = playerEmoji
 
   // Update hearts display
   updateHearts()
@@ -75,11 +77,14 @@ function initGame() {
   // Set up event listeners for options
   setupOptionListeners()
 
+  // Set up leave game functionality
+  setupLeaveGame()
+
   // Set initial message
   logElement.textContent = "Challenge begins! Choose the correct translation."
-  
+
   // Add initial animations
-  document.querySelectorAll(".option").forEach(btn => {
+  document.querySelectorAll(".option").forEach((btn) => {
     btn.classList.add("magic-effect")
     setTimeout(() => btn.classList.remove("magic-effect"), 1000)
   })
@@ -88,24 +93,45 @@ function initGame() {
   updateProgress()
 }
 
+// Fix the leave game functionality to prevent HP loss when clicking "Stay"
+function setupLeaveGame() {
+  leaveButton.addEventListener("click", (e) => {
+    e.preventDefault() // Prevent any default action
+    leaveModal.style.display = "flex"
+  })
+
+  // Using anchor tags now, but still need to handle the cancel action
+  cancelLeave.addEventListener("click", (e) => {
+    e.preventDefault() // Prevent any default action
+    leaveModal.style.display = "none"
+  })
+
+  // Close modal if clicked outside
+  window.addEventListener("click", (event) => {
+    if (event.target === leaveModal) {
+      leaveModal.style.display = "none"
+    }
+  })
+}
+
 // Load current level
 function loadLevel() {
   const boss = bosses[level]
   enemyHP = boss.hp
 
-  // Update boss image and question
-  document.getElementById("enemy-img").src = boss.img
+  // Update boss emoji and question
+  document.getElementById("enemy-emoji").textContent = boss.emoji
   document.getElementById("question").textContent = boss.question
-  
+
   // Add a small shake animation to the enemy when new level loads
-  const enemyImg = document.getElementById("enemy-img")
-  enemyImg.classList.add("magic-effect")
-  setTimeout(() => enemyImg.classList.remove("magic-effect"), 1000)
+  const enemyEmoji = document.getElementById("enemy-emoji")
+  enemyEmoji.classList.add("magic-effect")
+  setTimeout(() => enemyEmoji.classList.remove("magic-effect"), 1000)
 
   // Update options with shuffle
-  const optionButtons = document.querySelectorAll(".option")
+  const optionButtons = document.querySelectorAll("#options .option")
   const shuffledOptions = shuffleArray([...boss.options])
-  
+
   optionButtons.forEach((btn, i) => {
     btn.textContent = shuffledOptions[i]
     btn.classList.remove("correct-glow")
@@ -116,7 +142,7 @@ function loadLevel() {
 
   // Update progress
   updateProgress()
-  
+
   // Show level info
   logElement.textContent = `Level ${level + 1}: Challenging the ${boss.name}!`
 }
@@ -124,8 +150,8 @@ function loadLevel() {
 // Shuffle array (Fisher-Yates algorithm)
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]]
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[array[i], array[j]] = [array[j], array[i]]
   }
   return array
 }
@@ -166,7 +192,7 @@ function updateProgress() {
 // Add visual feedback for correct/incorrect answers
 function showFeedback(correct, button = null) {
   const parchment = document.querySelector(".parchment")
-  
+
   if (correct) {
     parchment.classList.add("correct-glow")
     if (button) button.classList.add("correct-glow")
@@ -180,78 +206,42 @@ function showFeedback(correct, button = null) {
   }
 }
 
-// Check game state after damage
-function checkGameState() {
-  if (enemyHP <= 0) {
-    score += 100 + (playerHP * 20) // Score based on remaining player health
-    
-    setTimeout(() => {
-      level++
-      if (level < bosses.length) {
-        logElement.textContent = `Victory! You earned ${score} points. Prepare for the next challenger!`
-        loadLevel()
-      } else {
-        // Game completed
-        gameScreen.innerHTML = `
-          <h2>🏆 Challenge Complete!</h2>
-          <div class="parchment">
-            <h3>Congratulations!</h3>
-            <p>You've mastered today's language challenge.</p>
-            <p>Final Score: ${score} points</p>
-            <p>Come back tomorrow for a new challenge!</p>
-            <button class="option" onclick="resetGame()">Play Again</button>
-          </div>
-        `
-      }
-    }, 1000)
-  } else if (playerHP <= 0) {
-    setTimeout(() => {
-      gameScreen.innerHTML = `
-        <h2>Challenge Failed</h2>
-        <div class="parchment">
-          <h3>Don't give up!</h3>
-          <p>Learning takes patience and practice.</p>
-          <p>Score: ${score} points</p>
-          <p>"Step into the arena. Speak slowly, Learn deeply."</p>
-          <button class="option" onclick="resetGame()">Try Again</button>
-        </div>
-      `
-    }, 1000)
-  }
-}
+// Fix the boss progression issue by adding a cooldown
+let isProcessingAnswer = false
 
-// Reset the game
-function resetGame() {
-  // Reload the page to reset everything
-  window.location.reload()
-}
-
-// Set up event listeners for options
+// Completely separate the option button click handlers from the modal
 function setupOptionListeners() {
-  document.querySelectorAll(".option").forEach((button) => {
+  const optionButtons = document.querySelectorAll("#options .option")
+
+  optionButtons.forEach((button) => {
     button.addEventListener("click", () => {
+      // If already processing an answer, ignore the click
+      if (isProcessingAnswer) return
+
+      isProcessingAnswer = true
+
       const boss = bosses[level]
-      const enemyImg = document.getElementById("enemy-img")
-      const playerImg = document.getElementById("player-img")
+      const enemyEmoji = document.getElementById("enemy-emoji")
+      const playerEmoji = document.getElementById("player-emoji")
 
       if (button.textContent === boss.correct) {
         // Correct answer
         enemyHP -= 1 // Enemy loses one heart
         score += 10 // Add points for correct answer
-        
+
         logElement.textContent = "✅ Correct! Great job!"
         hitSound.play()
-        enemyImg.classList.add("shake")
-        playerImg.classList.add("attack")
+        enemyEmoji.classList.add("shake")
+        playerEmoji.classList.add("attack")
         showFeedback(true, button)
       } else {
         // Wrong answer
         playerHP -= 1 // Player loses one heart
-        
+
         logElement.textContent = `❌ Incorrect! The correct answer was "${boss.correct}".`
         damageSound.play()
-        playerImg.classList.add("shake")
-        enemyImg.classList.add("attack")
+        playerEmoji.classList.add("shake")
+        enemyEmoji.classList.add("attack")
         showFeedback(false)
       }
 
@@ -262,11 +252,69 @@ function setupOptionListeners() {
       checkGameState()
 
       setTimeout(() => {
-        enemyImg.classList.remove("shake", "attack")
-        playerImg.classList.remove("shake", "attack")
-      }, 500)
+        enemyEmoji.classList.remove("shake", "attack")
+        playerEmoji.classList.remove("shake", "attack")
+        isProcessingAnswer = false // Reset the processing flag
+      }, 1000)
     })
   })
+}
+
+// Update checkGameState to prevent skipping bosses
+function checkGameState() {
+  if (enemyHP <= 0) {
+    isProcessingAnswer = true // Prevent further clicks
+    score += 100 + playerHP * 20 // Score based on remaining player health
+
+    setTimeout(() => {
+      level++
+      if (level < bosses.length) {
+        logElement.textContent = `Victory! You earned ${score} points. Prepare for the next challenger!`
+
+        // Add a delay before loading the next level
+        setTimeout(() => {
+          loadLevel()
+          isProcessingAnswer = false // Allow clicks again
+        }, 1500)
+      } else {
+        // Game completed
+        gameScreen.innerHTML = `
+          <h2>🏆 Challenge Complete!</h2>
+          <div class="parchment">
+            <h3>Congratulations!</h3>
+            <p>You've mastered today's language challenge.</p>
+            <p>Final Score: ${score} points</p>
+            <p>Come back tomorrow for a new challenge!</p>
+            <button class="option" onclick="resetGame()">Play Again</button>
+            <button class="option leave-option" onclick="window.location.href='index.html'">Exit Game</button>
+          </div>
+        `
+        isProcessingAnswer = false // Allow clicks again
+      }
+    }, 1000)
+  } else if (playerHP <= 0) {
+    isProcessingAnswer = true // Prevent further clicks
+    setTimeout(() => {
+      gameScreen.innerHTML = `
+        <h2>Challenge Failed</h2>
+        <div class="parchment">
+          <h3>Don't give up!</h3>
+          <p>Learning takes patience and practice.</p>
+          <p>Score: ${score} points</p>
+          <p>"Step into the arena. Speak slowly, Learn deeply."</p>
+          <button class="option" onclick="resetGame()">Try Again</button>
+          <button class="option leave-option" onclick="window.location.href='index.html'">Exit Game</button>
+        </div>
+      `
+      isProcessingAnswer = false // Allow clicks again
+    }, 1000)
+  }
+}
+
+// Reset the game
+function resetGame() {
+  // Reload the page to reset everything
+  window.location.reload()
 }
 
 // Start the game when page loads
