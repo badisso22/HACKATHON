@@ -1,39 +1,25 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 
 require_once '../Configurations/db.php';
+
+if (isset($_GET['action']) && $_GET['action'] === 'clear') {
+    unset($_SESSION['text']);
+    unset($_SESSION['language']);
+    unset($_SESSION['translatedText']);
+    header("Location: " . htmlspecialchars($_SERVER["PHP_SELF"]));
+    exit;
+}
+
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../Login/signin.php");
     exit();
 }
-
-// Rest of your existing code...
-
-// Check if clear action was requested
-/* if (isset($_GET['action']) && $_GET['action'] === 'clear') {
-    // Destroy the session
-    session_unset();
-    session_destroy();
-    
-    // Redirect to clean URL to avoid resubmission
-    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
-    exit; */
-//}
-
-// Force session destruction on page refresh (not POST)
-// Use a more reliable method to detect page refresh
-/* if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    // Store the current timestamp in a cookie to detect refresh
-    $lastVisit = isset($_COOKIE['last_visit']) ? $_COOKIE['last_visit'] : 0;
-    $currentTime = time();
-    
-    // Set the cookie for next time
-    setcookie('last_visit', $currentTime, time() + 86400, '/'); */
-    
-    // If this is a refresh (not first visit or direct navigation)
-//}
 
 $translatedText = '';
 $apiError = false;
@@ -960,19 +946,20 @@ function getLanguageFlag($language) {
 
     // Clear all data and destroy session
     function clearAll() {
-      // Clear UI elements
-      document.getElementById('text').value = '';
-      document.getElementById('language').value = '';
-      document.getElementById('show').innerHTML = '';
-      const statusElement = document.querySelector('.translation-status');
-      if (statusElement) {
-        statusElement.innerHTML = '';
-      }
-      
-      // Redirect to the same page with clear action to destroy session
-      window.location.href = '<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?action=clear';
-    }
+        // Clear inputs
+        document.getElementById('text').value = '';
+        document.getElementById('language').value = '';
+        document.getElementById('show').innerHTML = '';
 
+        // Clear optional status (if it exists)
+        const statusElement = document.querySelector('.translation-status');
+        if (statusElement) {
+            statusElement.innerHTML = '';
+        }
+
+        // Redirect to clear session data
+        window.location.href = '<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>?action=clear';
+    }
     // Mobile menu toggle
     document.addEventListener('DOMContentLoaded', function() {
       const menuToggle = document.querySelector('.menu-toggle');
