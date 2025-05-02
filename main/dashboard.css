@@ -1,0 +1,158 @@
+:root {
+    --primary-color: #9d4edd;
+    --primary-color-light: #b76ee8;
+    --primary-color-dark: #7b2cbf;
+    --background-color: #1f1235;
+    --card-bg: #2a1745;
+    --text-color: #ffffff;
+    --text-muted: #cccccc;
+    --button-hover: #7b2cbf;
+    --logout-color: #f44336;
+    --logout-hover: #e57373;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at 50% 50%, #2a1745 0%, #1f1235 100%);
+    color: var(--text-color);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 240px;
+    background: var(--primary-color-dark);
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .sidebar h1 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #fff;
+  }
+
+  .menu {
+    flex-grow: 1;
+  }
+
+  .menu a {
+    color: #fff;
+    text-decoration: none;
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 10px;
+    display: block;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  .menu a:hover {
+    background: var(--primary-color-light);
+  }
+
+  .logout {
+    margin-top: 20px;
+  }
+
+  .logout a {
+    background: var(--logout-color);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    display: block;
+    transition: background 0.3s;
+  }
+
+  .logout a:hover {
+    background: var(--logout-hover);
+  }
+
+  .main {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .welcome {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .card {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+  }
+
+  .progress {
+    margin-top: 10px;
+    background: #3e2462;
+    border-radius: 20px;
+    height: 20px;
+    width: 100%;
+  }
+
+  .progress-bar {
+    background: var(--primary-color);
+    height: 100%;
+    border-radius: 20px;
+    width: 70%;
+    animation: grow 2s ease-out forwards;
+  }
+
+  @keyframes grow {
+    from { width: 0; }
+    to { width: 70%; }
+  }
+
+  .start-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+  }
+
+  .start-btn:hover {
+    background: linear-gradient(135deg, var(--button-hover), var(--primary-color));
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    body {
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+      flex-direction: row;
+      overflow-x: auto;
+    }
+    .menu a {
+      margin: 0 10px;
+      white-space: nowrap;
+    }
+  }
