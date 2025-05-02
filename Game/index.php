@@ -1,5 +1,5 @@
 <?php
-require_once 'config.php';
+require_once '../Cofigurations/db.php';
 requireLogin(); // Ensure user is logged in
 
 // Get user info
@@ -12,7 +12,7 @@ $username = $_SESSION['username'] ?? 'Player';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mura Language Combat</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../css/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -23,7 +23,7 @@ $username = $_SESSION['username'] ?? 'Player';
   <header>
     <div class="logo-title">
       <div class="logo">
-        <img src="mura-logo.png" alt="Mura Logo" class="game-logo">
+        <img src="../image/mura.png" alt="Mura Logo" class="game-logo">
       </div>
       <h1>Mura — Language Combat</h1>
     </div>
@@ -75,7 +75,7 @@ $username = $_SESSION['username'] ?? 'Player';
       <p>Are you sure you want to leave? Your progress will be lost.</p>
       <div class="modal-buttons">
         <!-- Updated to redirect to dashboard -->
-        <a href="../Login v2.0/dashboard.php" id="confirm-leave" class="modal-btn leave-btn">LEAVE</a>
+        <a href="../Dashboard/dashboard.php" id="confirm-leave" class="modal-btn leave-btn">LEAVE</a>
         <a href="#" id="cancel-leave" class="modal-btn stay-btn">STAY</a>
       </div>
     </div>
@@ -101,6 +101,6 @@ $username = $_SESSION['username'] ?? 'Player';
     const userId = <?php echo $userId; ?>;
     const username = "<?php echo $username; ?>";
   </script>
-  <script src="game.js"></script>
+  <script src="../js/game.js"></script>
 </body>
 </html>
