@@ -1,5 +1,5 @@
 <?php
-require_once 'config.php';
+require_once '../Configurations/db.php';
 requireLogin(); // Ensure user is logged in
 
 header('Content-Type: application/json');
