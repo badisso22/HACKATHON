@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once '../Configurations/db.php';
 
 // Enable error reporting for debugging
 ini_set('display_errors', 1);
