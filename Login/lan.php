@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once '../Configurations/db.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -19,7 +19,7 @@ if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
     if ($user['onboarding_complete']) {
         // If onboarding is already complete, redirect to dashboard
-        header("Location: dashboard.php");
+        header("Location: ../Dashboard/dashboard.php");
         exit();
     }
 }
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mura - Learn Languages</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="../css/main.css">
     <style>
         :root {
             --primary-color: #9d4edd;
@@ -590,7 +590,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </main>
 
-    <script src="js/auth.js"></script>
+    <script src="../js/auth.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const backgroundWordsContainer = document.getElementById("backgroundWords");
