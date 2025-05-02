@@ -33,31 +33,43 @@ const playerEmoji = "🤺" // Knight emoji
 // Initialize the game
 async function initGame() {
   logElement.textContent = "Loading game data..."
-  
+
   try {
     // Load bosses from the database
     await loadBosses()
-    
+
     // Load user progress
     await loadUserProgress()
-    
+
     // Load user stats
     await loadUserStats()
-    
+
     // Load user streak
     await loadUserStreak()
-    
+
     // Set level from user progress if available
     if (userProgress && userProgress.current_level < bosses.length) {
       level = userProgress.current_level
     } else {
       level = 0
     }
-    
+
     // Reset game state
     playerHP = 5
     currentBoss = bosses[level]
-    enemyHP = currentBoss ? currentBoss.hp : 5 // Add null check
+
+    // Check if currentBoss exists before accessing its properties
+    if (currentBoss) {
+      enemyHP = currentBoss.hp
+
+      // Set enemy emoji
+      document.getElementById("enemy-emoji").textContent = currentBoss.emoji
+    } else {
+      console.error("No boss data available at level:", level)
+      logElement.textContent = "Error: Could not load boss data. Please try again."
+      return
+    }
+
     score = 0
     usedQuestions = [] // Reset used questions
     correctAnswers = 0 // Reset correct answers counter
@@ -65,11 +77,6 @@ async function initGame() {
 
     // Set player character emoji - always knight
     document.getElementById("player-emoji").textContent = playerEmoji
-    
-    // Set enemy emoji
-    if (currentBoss) {
-      document.getElementById("enemy-emoji").textContent = currentBoss.emoji
-    }
 
     // Update hearts display
     updateHearts()
@@ -103,11 +110,17 @@ async function initGame() {
 // Load bosses from the database
 async function loadBosses() {
   try {
-    const response = await fetch('game-api.php?action=getBosses')
+    // Use the correct path to the API - use the current directory
+    const response = await fetch("game-api.php?action=getBosses")
+
+    // Log the response for debugging
+    console.log("Bosses API response:", await response.clone().text())
+
     const data = await response.json()
-    
+
     if (data.success && data.bosses && data.bosses.length > 0) {
       bosses = data.bosses
+      console.log("Loaded bosses:", bosses)
     } else {
       throw new Error("Failed to load boss data")
     }
@@ -120,9 +133,9 @@ async function loadBosses() {
 // Load user stats (level, XP)
 async function loadUserStats() {
   try {
-    const response = await fetch('game-api.php?action=getUserStats')
+    const response = await fetch("game-api.php?action=getUserStats")
     const data = await response.json()
-    
+
     if (data.success) {
       userStats = data.stats
     } else {
@@ -138,9 +151,9 @@ async function loadUserStats() {
 // Load user streak information
 async function loadUserStreak() {
   try {
-    const response = await fetch('game-api.php?action=getUserStreak')
+    const response = await fetch("game-api.php?action=getUserStreak")
     const data = await response.json()
-    
+
     if (data.success) {
       userStreak = data.streak
     } else {
@@ -158,34 +171,34 @@ function updateUserStatsDisplay() {
   // Check if the stats elements exist
   const statsContainer = document.getElementById("user-stats")
   if (!statsContainer) return
-  
+
   // Update level and XP
   const levelElement = document.getElementById("user-level")
   const xpElement = document.getElementById("user-xp")
   const xpBarElement = document.getElementById("xp-bar")
-  
+
   if (levelElement && userStats) {
     levelElement.textContent = `Level ${userStats.level}`
   }
-  
+
   if (xpElement && userStats) {
     xpElement.textContent = `XP: ${userStats.xp}/${userStats.xpForNextLevel}`
   }
-  
+
   if (xpBarElement && userStats) {
     xpBarElement.style.width = `${userStats.xpProgress}%`
   }
-  
+
   // Update streak
   const streakElement = document.getElementById("user-streak")
   if (streakElement && userStreak) {
     streakElement.textContent = `🔥 ${userStreak.currentStreak} day streak`
-    
+
     // Hide streak if it's 0
     if (userStreak.currentStreak === 0) {
-      streakElement.style.display = 'none'
+      streakElement.style.display = "none"
     } else {
-      streakElement.style.display = 'block'
+      streakElement.style.display = "block"
     }
   }
 }
@@ -198,26 +211,32 @@ async function loadNextQuestion() {
       logElement.textContent = "Error: No boss data available."
       return
     }
-    
+
     // Get the current boss ID
     const bossId = currentBoss.id
-    
+
     // Get a new question for this boss
-    const response = await fetch(`game-api.php?action=getNextQuestion&bossId=${bossId}&usedQuestions=${usedQuestions.join(',')}`)
+    const response = await fetch(
+      `game-api.php?action=getNextQuestion&bossId=${bossId}&usedQuestions=${usedQuestions.join(",")}`,
+    )
+
+    // Log the response for debugging
+    console.log("Question API response:", await response.clone().text())
+
     const data = await response.json()
-    
+
     if (data.success && data.question) {
       currentQuestion = data.question
-      
+
       // Add this question to used questions
       usedQuestions.push(currentQuestion.id)
-      
+
       // Update the question and options in the UI
       document.getElementById("question").textContent = currentQuestion.question
-      
+
       // Get option buttons
       const optionButtons = document.querySelectorAll("#options .option")
-      
+
       // Check if we have enough option buttons
       if (currentQuestion.options.length > optionButtons.length) {
         // Need to add more option buttons
@@ -228,13 +247,13 @@ async function loadNextQuestion() {
           optionsContainer.appendChild(newButton)
         }
       }
-      
+
       // Get updated option buttons
       const updatedOptionButtons = document.querySelectorAll("#options .option")
-      
+
       // Update options with shuffle
       const shuffledOptions = shuffleArray([...currentQuestion.options])
-      
+
       updatedOptionButtons.forEach((btn, i) => {
         if (i < shuffledOptions.length) {
           btn.textContent = shuffledOptions[i]
@@ -244,7 +263,7 @@ async function loadNextQuestion() {
           btn.style.display = "none" // Hide extra buttons
         }
       })
-      
+
       // Show level info
       logElement.textContent = `Level ${level + 1}: Challenging the ${currentBoss.name}!`
     } else {
@@ -259,9 +278,9 @@ async function loadNextQuestion() {
 // Load user progress from the database
 async function loadUserProgress() {
   try {
-    const response = await fetch('game-api.php?action=getUserProgress')
+    const response = await fetch("game-api.php?action=getUserProgress")
     const data = await response.json()
-    
+
     if (data.success) {
       userProgress = data.progress
     } else {
@@ -277,35 +296,35 @@ async function loadUserProgress() {
 async function saveProgress(isEndGame = false, isCompleted = false) {
   try {
     const formData = new FormData()
-    formData.append('level', level)
-    formData.append('score', score)
-    
+    formData.append("level", level)
+    formData.append("score", score)
+
     if (isEndGame) {
-      formData.append('endGame', 1)
-      formData.append('maxLevel', level)
-      formData.append('completed', isCompleted ? 1 : 0)
-      formData.append('correctAnswers', correctAnswers)
-      formData.append('totalQuestions', totalQuestions)
+      formData.append("endGame", 1)
+      formData.append("maxLevel", level)
+      formData.append("completed", isCompleted ? 1 : 0)
+      formData.append("correctAnswers", correctAnswers)
+      formData.append("totalQuestions", totalQuestions)
     }
-    
-    const response = await fetch('game-api.php?action=saveProgress', {
-      method: 'POST',
-      body: formData
+
+    const response = await fetch("game-api.php?action=saveProgress", {
+      method: "POST",
+      body: formData,
     })
-    
+
     const data = await response.json()
-    
+
     // If this is the end of the game, check for level up and streak updates
     if (isEndGame && data.success) {
       if (data.levelUp) {
         showLevelUpNotification(data.newLevel)
       }
-      
+
       if (data.streakUpdated && data.streakReward > 0) {
         showStreakRewardNotification(data.currentStreak, data.streakReward)
       }
     }
-    
+
     return data.success
   } catch (error) {
     console.error("Error saving progress:", error)
@@ -316,24 +335,24 @@ async function saveProgress(isEndGame = false, isCompleted = false) {
 // Show level up notification
 function showLevelUpNotification(newLevel) {
   // Create notification element
-  const notification = document.createElement('div')
-  notification.className = 'level-up-notification'
+  const notification = document.createElement("div")
+  notification.className = "level-up-notification"
   notification.innerHTML = `
     <div class="level-up-content">
       <h3>🎉 Level Up! 🎉</h3>
       <p>You've reached level ${newLevel}!</p>
     </div>
   `
-  
+
   // Add to document
   document.body.appendChild(notification)
-  
+
   // Remove after animation
   setTimeout(() => {
-    notification.classList.add('show')
-    
+    notification.classList.add("show")
+
     setTimeout(() => {
-      notification.classList.remove('show')
+      notification.classList.remove("show")
       setTimeout(() => notification.remove(), 500)
     }, 3000)
   }, 100)
@@ -342,24 +361,24 @@ function showLevelUpNotification(newLevel) {
 // Show streak reward notification
 function showStreakRewardNotification(streak, reward) {
   // Create notification element
-  const notification = document.createElement('div')
-  notification.className = 'streak-notification'
+  const notification = document.createElement("div")
+  notification.className = "streak-notification"
   notification.innerHTML = `
     <div class="streak-content">
       <h3>🔥 ${streak} Day Streak! 🔥</h3>
       <p>You earned ${reward} bonus XP!</p>
     </div>
   `
-  
+
   // Add to document
   document.body.appendChild(notification)
-  
+
   // Remove after animation
   setTimeout(() => {
-    notification.classList.add('show')
-    
+    notification.classList.add("show")
+
     setTimeout(() => {
-      notification.classList.remove('show')
+      notification.classList.remove("show")
       setTimeout(() => notification.remove(), 500)
     }, 3000)
   }, 100)
@@ -377,7 +396,7 @@ function setupLeaveGame() {
     e.preventDefault() // Prevent any default action
     leaveModal.style.display = "none"
   })
-  
+
   // Save progress before leaving
   confirmLeave.addEventListener("click", async (e) => {
     // Save progress before leaving
@@ -398,7 +417,7 @@ async function loadLevel() {
     logElement.textContent = "Error: No more bosses available."
     return
   }
-  
+
   currentBoss = bosses[level]
   enemyHP = currentBoss.hp
   usedQuestions = [] // Reset used questions for the new boss
@@ -419,7 +438,7 @@ async function loadLevel() {
 
   // Update progress
   updateProgress()
-  
+
   // Save progress when loading a new level
   saveProgress()
 }
@@ -440,7 +459,7 @@ function updateHearts() {
     console.error("No boss data available for updating hearts")
     return
   }
-  
+
   // Create hearts HTML
   let playerHeartsHTML = ""
   let enemyHeartsHTML = ""
@@ -500,7 +519,7 @@ function setupOptionListeners() {
     button.addEventListener("click", async () => {
       // If already processing an answer, ignore the click
       if (isProcessingAnswer) return
-      
+
       // Check if currentQuestion exists
       if (!currentQuestion) {
         logElement.textContent = "Error: No question data available."
@@ -524,10 +543,11 @@ function setupOptionListeners() {
         enemyEmoji.classList.add("shake")
         playerEmoji.classList.add("attack")
         showFeedback(true, button)
-        
+
         // Load a new question after a correct answer
         setTimeout(async () => {
-          if (enemyHP > 0) { // Only load new question if boss isn't defeated
+          if (enemyHP > 0) {
+            // Only load new question if boss isn't defeated
             await loadNextQuestion()
           }
         }, 1000)
@@ -540,10 +560,11 @@ function setupOptionListeners() {
         playerEmoji.classList.add("shake")
         enemyEmoji.classList.add("attack")
         showFeedback(false)
-        
+
         // Load a new question after an incorrect answer
         setTimeout(async () => {
-          if (playerHP > 0) { // Only load new question if player isn't defeated
+          if (playerHP > 0) {
+            // Only load new question if player isn't defeated
             await loadNextQuestion()
           }
         }, 1000)
@@ -574,7 +595,7 @@ async function checkGameState() {
       level++
       if (level < bosses.length) {
         logElement.textContent = `Victory! You earned ${score} points. Prepare for the next challenger!`
-        
+
         // Save progress after defeating a boss
         await saveProgress()
 
@@ -586,7 +607,7 @@ async function checkGameState() {
       } else {
         // Game completed - save final progress
         await saveProgress(true, true)
-        
+
         // Game completed
         gameScreen.innerHTML = `
           <h2>🏆 Challenge Complete!</h2>
@@ -597,7 +618,7 @@ async function checkGameState() {
             <p>Accuracy: ${Math.round((correctAnswers / totalQuestions) * 100)}% (${correctAnswers}/${totalQuestions})</p>
             <p>Come back tomorrow for a new challenge!</p>
             <button class="option" onclick="resetGame()">Play Again</button>
-            <button class="option leave-option" onclick="window.location.href='../Login v2.0/dashboard.php'">Return to Dashboard</button>
+            <button class="option leave-option" onclick="window.location.href='../Dashboard/dashboard.php'">Return to Dashboard</button>
           </div>
         `
         isProcessingAnswer = false // Allow clicks again
@@ -605,10 +626,10 @@ async function checkGameState() {
     }, 1000)
   } else if (playerHP <= 0) {
     isProcessingAnswer = true // Prevent further clicks
-    
+
     // Save progress when game is failed
     await saveProgress(true, false)
-    
+
     setTimeout(() => {
       gameScreen.innerHTML = `
         <h2>Challenge Failed</h2>
@@ -619,7 +640,7 @@ async function checkGameState() {
           <p>Accuracy: ${Math.round((correctAnswers / totalQuestions) * 100)}% (${correctAnswers}/${totalQuestions})</p>
           <p>"Step into the arena. Speak slowly, Learn deeply."</p>
           <button class="option" onclick="resetGame()">Try Again</button>
-          <button class="option leave-option" onclick="window.location.href='../Login v2.0/dashboard.php'">Return to Dashboard</button>
+          <button class="option leave-option" onclick="window.location.href='../Dashboard/dashboard.php'">Return to Dashboard</button>
         </div>
       `
       isProcessingAnswer = false // Allow clicks again
@@ -633,5 +654,11 @@ function resetGame() {
   window.location.reload()
 }
 
+// Add console logging for debugging
+console.log("Game script loaded")
+
 // Start the game when page loads
-window.addEventListener("load", initGame)
+window.addEventListener("load", () => {
+  console.log("Window loaded, initializing game...")
+  initGame()
+})
