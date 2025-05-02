@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Language Buddy AI</title>
+  <link rel="stylesheet" href="chat_ai.css">
+</head>
+<body>
+  <h1>🧠 Language Buddy AI</h1>
+  <div class="chat-container">
+    <div class="controls">
+      <select id="language">
+        <option value="en-US">English</option>
+        <option value="fr-FR">Français</option>
+        <option value="es-ES">Español</option>
+        <option value="de-DE">Deutsch</option>
+        <option value="it-IT">Italiano</option>
+      </select>
+      <button id="talkButton">🎤 Talk</button>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type something...">
+      <button id="sendButton">Send</button>
+    </div>
+    <div class="debug-panel">
+      <button id="testConnectionBtn">Test Connection</button>
+      <div id="debugOutput" class="debug-output"></div>
+    </div>
+  </div>
+
+  <script src="chat_ai.js"></script>
+</body>
+</html>
