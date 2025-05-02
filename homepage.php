@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="icon" type="image/png" href="Screenshot_2025-05-01_at_11.42.04_PM-removebg.png" />
+  <link rel="icon" type="image/mura.png" href="Screenshot_2025-05-01_at_11.42.04_PM-removebg.png" />
   <title>Mura</title>
   
   <style>
@@ -260,12 +260,12 @@
 <body>
   <header>
     <div class="logo-title">
-      <div class="logo"><img src="Screenshot_2025-05-01_at_11.42.04_PM-removebg.png" alt="Mura"></div>
+      <div class="logo"><img src="image/mura.png" alt="Mura"></div>
       <h1>Mura — Where Language Meets Patience</h1>
     </div>
     <form class="nav-buttons">
-      <a href="../Login/signin.php" class="btn btn-outline" >Sign In</a>
-      <a href="../Login/signup.php" class="btn" >Sign Up</a>
+      <a href="Login/signin.php" class="btn btn-outline" >Sign In</a>
+      <a href="Login/signup.php" class="btn" >Sign Up</a>
     </div>
   </header>
 
@@ -302,7 +302,7 @@
         <div class="description-text">
           <h4>-- Step into the arena. Speak slowly, Learn deeply --</h4>
           <div class="cta-button">
-            <a href="../Login/signup.php" class="btn">Get Started</a>
+            <a href="Login/signup.php" class="btn">Get Started</a>
           </div>
         </div>
       </div>
