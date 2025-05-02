@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once '../Configurations/db.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -26,7 +26,7 @@ try {
 
     // If onboarding is already complete, redirect to dashboard
     if ($user['onboarding_complete']) {
-        header("Location: dashboard.php");
+        header("Location: ../Dashboard/dashboard.php");
         exit();
     }
 
@@ -85,7 +85,7 @@ try {
         error_log("Error updating completion flags: " . $e->getMessage());
     }
 
-    header("Location: dashboard.php");
+    header("Location: ../Dashboard/dashboard.php");
     exit();
 } catch (Exception $e) {
     error_log("Onboarding check error: " . $e->getMessage());
