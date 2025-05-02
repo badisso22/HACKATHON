@@ -14,9 +14,12 @@
   <!-- Header -->
   <header>
     <div class="logo-title">
-      <div class="logo">M</div>
+      <div class="logo">
+        <img src="mura-logo.png" alt="Mura Logo" class="game-logo">
+      </div>
       <h1>Mura — Language Combat</h1>
     </div>
+    <button id="leave-game" class="leave-button">Leave Game</button>
   </header>
   
   <!-- Game Screen -->
@@ -31,11 +34,15 @@
     <div id="battle-area">
       <div id="player" class="health">
         <div id="player-hearts" class="hearts">❤️❤️❤️❤️❤️</div>
-        <img id="player-img" class="character bounce" src="https://i.imgur.com/NLRi5Ob.png" alt="Player">
+        <div class="emoji-container">
+          <div id="player-emoji" class="character bounce">🤺</div>
+        </div>
       </div>
       <div id="enemy" class="health">
         <div id="enemy-hearts" class="hearts">❤️❤️❤️❤️❤️</div>
-        <img id="enemy-img" class="character bounce" src="https://i.imgur.com/3vc49fQ.png" alt="Boss">
+        <div class="emoji-container">
+          <div id="enemy-emoji" class="character bounce">🧙‍♂️</div>
+        </div>
       </div>
     </div>
     
@@ -51,6 +58,19 @@
     </div>
     
     <div id="log"></div>
+  </div>
+  
+  <!-- Leave Game Confirmation Modal -->
+  <div id="leave-modal" class="modal">
+    <div class="modal-content">
+      <h3>Leave Game?</h3>
+      <p>Are you sure you want to leave? Your progress will be lost.</p>
+      <div class="modal-buttons">
+        <!-- Completely redesigned buttons -->
+        <a href="index.html" id="confirm-leave" class="modal-btn leave-btn">LEAVE</a>
+        <a href="#" id="cancel-leave" class="modal-btn stay-btn">STAY</a>
+      </div>
+    </div>
   </div>
   
   <!-- Footer -->
