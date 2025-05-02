@@ -1,5 +1,5 @@
 <?php
-require_once '../Cofigurations/db.php';
+require_once '../Configurations/db.php';
 requireLogin(); // Ensure user is logged in
 
 // Get user info
@@ -23,7 +23,7 @@ $username = $_SESSION['username'] ?? 'Player';
   <header>
     <div class="logo-title">
       <div class="logo">
-        <img src="../image/mura.png" alt="Mura Logo" class="game-logo">
+        <img src="mura-logo.png" alt="Mura Logo" class="game-logo">
       </div>
       <h1>Mura — Language Combat</h1>
     </div>
