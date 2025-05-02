@@ -264,8 +264,8 @@
       <h1>Mura — Where Language Meets Patience</h1>
     </div>
     <form class="nav-buttons">
-      <a href="login.php" class="btn btn-outline" >Sign In</a>
-      <a href="signup.php" class="btn" >Sign Up</a>
+      <a href="../Login/signin.php" class="btn btn-outline" >Sign In</a>
+      <a href="../Login/signup.php" class="btn" >Sign Up</a>
     </div>
   </header>
 
@@ -302,7 +302,7 @@
         <div class="description-text">
           <h4>-- Step into the arena. Speak slowly, Learn deeply --</h4>
           <div class="cta-button">
-            <a href="signup.php" class="btn">Get Started</a>
+            <a href="../Login/signup.php" class="btn">Get Started</a>
           </div>
         </div>
       </div>
