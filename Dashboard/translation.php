@@ -33,13 +33,6 @@ if (!isset($_SESSION['user_id'])) {
     setcookie('last_visit', $currentTime, time() + 86400, '/'); */
     
     // If this is a refresh (not first visit or direct navigation)
-    if ($lastVisit > 0) {
-        // Destroy the session completely
-        session_unset();
-        session_destroy();
-        // Start a new session
-        session_start();
-    }
 //}
 
 $translatedText = '';
