@@ -1,0 +1,176 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  body {
+    background-color: #f5f7fa;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .video-chat-container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    max-width: 900px;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: 24px;
+    color: #5a3b5d;
+    margin-bottom: 20px;
+  }
+
+  #videos {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  #local-video, #remote-video {
+    width: 45%;
+    height: 200px;
+    background: black;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  button {
+    padding: 12px 25px;
+    background-color: #5a3b5d;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  button:hover {
+    background-color: #7e57c2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  button:focus {
+    outline: none;
+  }
+
+  /* Back Button */
+  .back-btn {
+    padding: 10px 20px;
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+  }
+
+  .back-btn:hover {
+    background-color: #d1d1d1;
+    transform: translateY(-2px);
+  }
+
+  /* Responsive Styles */
+  @media (max-width: 768px) {
+    #videos {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #local-video, #remote-video {
+      width: 80%;
+      margin-bottom: 20px;
+    }
+
+    .button-container {
+      flex-direction: column;
+    }
+  }
+
+  /* Style for the top bar content */
+.top-bar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+/* Back button styling */
+.back-btn {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+/* Language and proficiency level display */
+.language-level-indicator {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.language-name {
+    margin-right: 10px;
+}
+
+.proficiency-level {
+    margin-left: 10px;
+    font-style: italic;
+    color: #666;
+}
+/* Style for the top bar content */
+.top-bar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+/* Back button styling */
+.back-btn {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+/* Example video container styles */
+#videos {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  #local-video, #remote-video {
+    width: 45%;
+    height: 300px;
+    background-color: black;
+  }
+  
