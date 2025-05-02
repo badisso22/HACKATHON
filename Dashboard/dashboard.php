@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once '../Configurations/db.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: signin.php");
+    header("Location: ../Login/signin.php");
     exit();
 }
 
@@ -24,7 +24,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    header("Location: signin.php");
+    header("Location: ../Login/signin.php");
     exit();
 }
 
@@ -157,7 +157,7 @@ $vocabularyWords = getRandomVocabularyWords($selected_language);
             <div class="logo">
                 <div class="logo-container">
                     <div class="mura-logo">
-                        <img src="mura.png" alt="Mura Logo">
+                        <img src="../image/mura.png" alt="Mura Logo">
                     </div>
                     <h1>Mura</h1>
                 </div>
