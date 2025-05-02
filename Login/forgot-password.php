@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db.php';
+require_once '../Configurations/db.php';
 
 $error = '';
 $success = '';
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles/auth.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
   <div class="background-words-container" id="backgroundWords">
@@ -87,6 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 
-  <script src="js/auth.js"></script>
+  <script src="../js/auth.js"></script>
 </body>
 </html>
