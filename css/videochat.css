@@ -167,10 +167,42 @@
     display: flex;
     justify-content: space-between;
   }
-  
   #local-video, #remote-video {
     width: 45%;
     height: 300px;
     background-color: black;
+  }
+  .bottom-navigation {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 25px;
+    background: #5a3b5d;
+    color: white;
+    text-decoration: none;
+    border-radius: 30px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .back-btn:hover {
+    background: #7e57c2;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+  }
+  
+  .back-btn i {
+    margin-right: 8px;
   }
   
