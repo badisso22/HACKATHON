@@ -20,34 +20,6 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: ../Login/signin.php");
     exit();
 }
-
-// Rest of your existing code...
-
-// Check if clear action was requested
-/* if (isset($_GET['action']) && $_GET['action'] === 'clear') {
-    // Destroy the session
-    session_unset();
-    session_destroy();
-    
-    // Redirect to clean URL to avoid resubmission
-    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
-    exit; */
-//}
-
-// Force session destruction on page refresh (not POST)
-// Use a more reliable method to detect page refresh
-/* if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    // Store the current timestamp in a cookie to detect refresh
-    $lastVisit = isset($_COOKIE['last_visit']) ? $_COOKIE['last_visit'] : 0;
-    $currentTime = time();
-    
-    // Set the cookie for next time
-    setcookie('last_visit', $currentTime, time() + 86400, '/'); */
-    
-    // If this is a refresh (not first visit or direct navigation)
-    
-//}
-
 $translatedText = '';
 $apiError = false;
 
@@ -737,11 +709,9 @@ function getLanguageFlag($language) {
 </head>
 
 <body>
-    <!-- Background words container -->
     <div id="backgroundWords"></div>
     
     <div class="app-container">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div class="logo">
                 <div class="logo-container">
@@ -802,7 +772,7 @@ function getLanguageFlag($language) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Settings/settings.php">
                             <i class="fas fa-cog"></i>
                             Settings
                         </a>
