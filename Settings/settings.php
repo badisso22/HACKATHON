@@ -1,6 +1,13 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 require_once '../Configurations/db.php';
+
+// Enable full error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -9,54 +16,98 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
-
-// Initialize variables for notifications
 $notification = '';
-$notificationType = '';
+$notification_type = 'success'; // success, error, warning
+$debug_info = []; // For storing debug information
+
+// Helper function to log debug info
+function debug_log($message) {
+    global $debug_info;
+    $debug_info[] = date('H:i:s') . ': ' . $message;
+}
+
+// Store theme preference in cookie for persistence
+if (isset($_POST['theme_submit'])) {
+    $theme = mysqli_real_escape_string($conn, $_POST['theme']);
+    setcookie('mura_theme', $theme, time() + (86400 * 365), "/"); // Cookie valid for 1 year
+    $_SESSION['theme'] = $theme;
+}
+
+// Get theme preference from cookie or session
+if (isset($_COOKIE['mura_theme'])) {
+    $theme = $_COOKIE['mura_theme'];
+} elseif (isset($_SESSION['theme'])) {
+    $theme = $_SESSION['theme'];
+} else {
+    $theme = 'light'; // Default theme
+}
 
 // Process form submissions
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    debug_log("Form submitted: " . json_encode($_POST));
+    
     // Determine which form was submitted
     if (isset($_POST['profile_submit'])) {
         // Process profile information form
-        $firstName = filter_input(INPUT_POST, 'firstName', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $lastName = filter_input(INPUT_POST, 'lastName', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $dateOfBirth = filter_input(INPUT_POST, 'dateOfBirth', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $gender = filter_input(INPUT_POST, 'gender', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $phoneNumber = filter_input(INPUT_POST, 'phoneNumber', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $address = filter_input(INPUT_POST, 'address', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $firstName = mysqli_real_escape_string($conn, $_POST['firstName']);
+        $lastName = mysqli_real_escape_string($conn, $_POST['lastName']);
+        $dateOfBirth = mysqli_real_escape_string($conn, $_POST['dateOfBirth']);
+        $gender = mysqli_real_escape_string($conn, $_POST['gender']);
+        $phoneNumber = mysqli_real_escape_string($conn, $_POST['phoneNumber']);
+        $address = mysqli_real_escape_string($conn, $_POST['address']);
         
-        // Validate inputs
-        $errors = [];
-        if (empty($firstName)) {
-            $errors[] = "First name is required";
-        }
-        if (empty($lastName)) {
-            $errors[] = "Last name is required";
-        }
-        if (empty($dateOfBirth)) {
-            $errors[] = "Date of birth is required";
-        }
-        if (empty($gender)) {
-            $errors[] = "Gender is required";
-        }
+        debug_log("Processing profile update: firstName=$firstName, lastName=$lastName");
         
-        // If no errors, update user data
-        if (empty($errors)) {
-            // Update learner table
-            $stmt = $conn->prepare("UPDATE learner SET first_name = ?, last_name = ?, date_of_birth = ?, phone_number = ?, gender = ?, address = ? WHERE user_ID = ?");
-            $stmt->bind_param("ssssssi", $firstName, $lastName, $dateOfBirth, $phoneNumber, $gender, $address, $user_id);
+        try {
+            // Start transaction
+            mysqli_begin_transaction($conn);
             
-            if ($stmt->execute()) {
-                $notification = "Profile information updated successfully!";
-                $notificationType = "success";
+            // Check if learner record exists
+            $check_sql = "SELECT * FROM learner WHERE user_ID = ?";
+            $check_stmt = mysqli_prepare($conn, $check_sql);
+            mysqli_stmt_bind_param($check_stmt, "i", $user_id);
+            mysqli_stmt_execute($check_stmt);
+            $check_result = mysqli_stmt_get_result($check_stmt);
+            
+            if (mysqli_num_rows($check_result) > 0) {
+                // Update existing record
+                $sql = "UPDATE learner SET first_name = ?, last_name = ?, date_of_birth = ?, phone_number = ?, gender = ?, address = ? WHERE user_ID = ?";
+                $stmt = mysqli_prepare($conn, $sql);
+                mysqli_stmt_bind_param($stmt, "ssssssi", $firstName, $lastName, $dateOfBirth, $phoneNumber, $gender, $address, $user_id);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    $affected_rows = mysqli_stmt_affected_rows($stmt);
+                    debug_log("Update successful. Affected rows: $affected_rows");
+                    $notification = "Profile information updated successfully!";
+                    $notification_type = "success";
+                } else {
+                    throw new Exception("Error updating profile: " . mysqli_error($conn));
+                }
             } else {
-                $notification = "Error updating profile information: " . $conn->error;
-                $notificationType = "error";
+                // Insert new record
+                $sql = "INSERT INTO learner (user_ID, first_name, last_name, date_of_birth, phone_number, gender, address) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmt = mysqli_prepare($conn, $sql);
+                mysqli_stmt_bind_param($stmt, "issssss", $user_id, $firstName, $lastName, $dateOfBirth, $phoneNumber, $gender, $address);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    debug_log("Insert successful");
+                    $notification = "Profile information created successfully!";
+                    $notification_type = "success";
+                } else {
+                    throw new Exception("Error creating profile: " . mysqli_error($conn));
+                }
             }
-        } else {
-            $notification = "Please fix the following errors: " . implode(", ", $errors);
-            $notificationType = "error";
+            
+            // Commit transaction
+            mysqli_commit($conn);
+            
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            mysqli_rollback($conn);
+            debug_log("Error: " . $e->getMessage());
+            $notification = $e->getMessage();
+            $notification_type = "error";
         }
     } elseif (isset($_POST['security_submit'])) {
         // Process security form
@@ -64,124 +115,255 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $newPassword = $_POST['newPassword'];
         $confirmPassword = $_POST['confirmPassword'];
         
-        // Validate inputs
-        $errors = [];
-        if (empty($currentPassword)) {
-            $errors[] = "Current password is required";
-        }
-        if (empty($newPassword) || strlen($newPassword) < 8) {
-            $errors[] = "New password must be at least 8 characters";
-        }
-        if ($newPassword !== $confirmPassword) {
-            $errors[] = "Passwords do not match";
-        }
+        debug_log("Processing security form");
         
-        // If no errors, update password
-        if (empty($errors)) {
-            // Verify current password
-            $stmt = $conn->prepare("SELECT password FROM users WHERE user_ID = ?");
-            $stmt->bind_param("i", $user_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            if ($row = $result->fetch_assoc()) {
-                if (password_verify($currentPassword, $row['password'])) {
-                    // Hash new password
-                    $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-                    
-                    // Update password
-                    $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE user_ID = ?");
-                    $updateStmt->bind_param("si", $hashedPassword, $user_id);
-                    
-                    if ($updateStmt->execute()) {
-                        $notification = "Password updated successfully!";
-                        $notificationType = "success";
-                    } else {
-                        $notification = "Error updating password: " . $conn->error;
-                        $notificationType = "error";
-                    }
-                } else {
-                    $notification = "Current password is incorrect";
-                    $notificationType = "error";
-                }
-            } else {
-                $notification = "User not found";
-                $notificationType = "error";
+        try {
+            if ($newPassword !== $confirmPassword) {
+                throw new Exception("New passwords do not match!");
             }
-        } else {
-            $notification = "Please fix the following errors: " . implode(", ", $errors);
-            $notificationType = "error";
+            
+            if (strlen($newPassword) < 8) {
+                throw new Exception("Password must be at least 8 characters long");
+            }
+            
+            // Verify current password
+            $sql = "SELECT password FROM users WHERE user_ID = ?";
+            $stmt = mysqli_prepare($conn, $sql);
+            mysqli_stmt_bind_param($stmt, "i", $user_id);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            $user_data = mysqli_fetch_assoc($result);
+            
+            if (!password_verify($currentPassword, $user_data['password'])) {
+                throw new Exception("Current password is incorrect");
+            }
+            
+            // Hash new password
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            // Update password
+            $sql = "UPDATE users SET password = ? WHERE user_ID = ?";
+            $stmt = mysqli_prepare($conn, $sql);
+            mysqli_stmt_bind_param($stmt, "si", $hashedPassword, $user_id);
+            
+            if (mysqli_stmt_execute($stmt)) {
+                $affected_rows = mysqli_stmt_affected_rows($stmt);
+                debug_log("Password update successful. Affected rows: $affected_rows");
+                $notification = "Password updated successfully!";
+                $notification_type = "success";
+            } else {
+                throw new Exception("Error updating password: " . mysqli_error($conn));
+            }
+            
+        } catch (Exception $e) {
+            debug_log("Error: " . $e->getMessage());
+            $notification = $e->getMessage();
+            $notification_type = "error";
         }
     } elseif (isset($_POST['language_submit'])) {
         // Process language preferences form
-        $selectedLanguage = filter_input(INPUT_POST, 'selectedLanguage', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $proficiencyLevel = filter_input(INPUT_POST, 'proficiencyLevel', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $dailyGoal = filter_input(INPUT_POST, 'dailyGoal', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $reason = filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $selectedLanguage = mysqli_real_escape_string($conn, $_POST['selectedLanguage']);
+        $proficiencyLevel = mysqli_real_escape_string($conn, $_POST['proficiencyLevel']);
+        $dailyGoal = mysqli_real_escape_string($conn, $_POST['dailyGoal']);
+        $reason = mysqli_real_escape_string($conn, $_POST['reason']);
         
-        // Validate inputs
-        $errors = [];
-        if (empty($selectedLanguage)) {
-            $errors[] = "Language selection is required";
-        }
-        if (empty($proficiencyLevel)) {
-            $errors[] = "Proficiency level is required";
-        }
-        if (empty($dailyGoal)) {
-            $errors[] = "Daily goal is required";
-        }
+        debug_log("Processing language form: language=$selectedLanguage, level=$proficiencyLevel");
         
-        // If no errors, update language preferences
-        if (empty($errors)) {
-            // Update user_onboarding table
-            $stmt = $conn->prepare("UPDATE user_onboarding SET selected_language = ?, proficiency_level = ?, daily_goal = ?, reason = ? WHERE user_ID = ?");
-            $stmt->bind_param("ssssi", $selectedLanguage, $proficiencyLevel, $dailyGoal, $reason, $user_id);
+        try {
+            // Start transaction
+            mysqli_begin_transaction($conn);
             
-            if ($stmt->execute()) {
-                $notification = "Language preferences updated successfully!";
-                $notificationType = "success";
+            // Check if user_onboarding record exists
+            $check_sql = "SELECT * FROM user_onboarding WHERE user_ID = ?";
+            $check_stmt = mysqli_prepare($conn, $check_sql);
+            mysqli_stmt_bind_param($check_stmt, "i", $user_id);
+            mysqli_stmt_execute($check_stmt);
+            $check_result = mysqli_stmt_get_result($check_stmt);
+            
+            if (mysqli_num_rows($check_result) > 0) {
+                // Update existing record
+                $sql = "UPDATE user_onboarding SET selected_language = ?, proficiency_level = ?, daily_goal = ?, reason = ?, is_complete = 1 WHERE user_ID = ?";
+                $stmt = mysqli_prepare($conn, $sql);
+                mysqli_stmt_bind_param($stmt, "ssssi", $selectedLanguage, $proficiencyLevel, $dailyGoal, $reason, $user_id);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    $affected_rows = mysqli_stmt_affected_rows($stmt);
+                    debug_log("Update successful. Affected rows: $affected_rows");
+                    
+                    // Also update the onboarding_complete flag in users table
+                    $sql = "UPDATE users SET onboarding_complete = 1 WHERE user_ID = ?";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "i", $user_id);
+                    mysqli_stmt_execute($stmt);
+                    
+                    $notification = "Language preferences updated successfully!";
+                    $notification_type = "success";
+                } else {
+                    throw new Exception("Error updating language preferences: " . mysqli_error($conn));
+                }
             } else {
-                $notification = "Error updating language preferences: " . $conn->error;
-                $notificationType = "error";
+                // Insert new record
+                $sql = "INSERT INTO user_onboarding (user_ID, selected_language, proficiency_level, daily_goal, reason, is_complete) 
+                        VALUES (?, ?, ?, ?, ?, 1)";
+                $stmt = mysqli_prepare($conn, $sql);
+                mysqli_stmt_bind_param($stmt, "issss", $user_id, $selectedLanguage, $proficiencyLevel, $dailyGoal, $reason);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    debug_log("Insert successful");
+                    
+                    // Also update the onboarding_complete flag in users table
+                    $sql = "UPDATE users SET onboarding_complete = 1 WHERE user_ID = ?";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "i", $user_id);
+                    mysqli_stmt_execute($stmt);
+                    
+                    $notification = "Language preferences created successfully!";
+                    $notification_type = "success";
+                } else {
+                    throw new Exception("Error creating language preferences: " . mysqli_error($conn));
+                }
             }
-        } else {
-            $notification = "Please fix the following errors: " . implode(", ", $errors);
-            $notificationType = "error";
+            
+            // Commit transaction
+            mysqli_commit($conn);
+            
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            mysqli_rollback($conn);
+            debug_log("Error: " . $e->getMessage());
+            $notification = $e->getMessage();
+            $notification_type = "error";
         }
+    } elseif (isset($_POST['avatar_submit'])) {
+        // Process avatar upload
+        try {
+            if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
+                $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+                $filename = $_FILES['avatar']['name'];
+                $filetype = pathinfo($filename, PATHINFO_EXTENSION);
+                
+                // Verify file extension
+                if (!in_array(strtolower($filetype), $allowed)) {
+                    throw new Exception("Only JPG, JPEG, PNG, and GIF files are allowed");
+                }
+                
+                // Verify file size - 5MB maximum
+                $maxsize = 5 * 1024 * 1024;
+                if ($_FILES['avatar']['size'] > $maxsize) {
+                    throw new Exception("File size must be less than 5MB");
+                }
+                
+                // Create unique filename
+                $new_filename = "avatar_" . $user_id . "_" . time() . "." . $filetype;
+                $upload_dir = "../uploads/avatars/";
+                
+                // Create directory if it doesn't exist
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                $upload_path = $upload_dir . $new_filename;
+                
+                // Move the file
+                if (move_uploaded_file($_FILES['avatar']['tmp_name'], $upload_path)) {
+                    // Update database with new avatar path
+                    $avatar_path = "uploads/avatars/" . $new_filename;
+                    $sql = "UPDATE users SET profile_picture = ? WHERE user_ID = ?";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "si", $avatar_path, $user_id);
+                    
+                    if (mysqli_stmt_execute($stmt)) {
+                        $notification = "Profile picture updated successfully!";
+                        $notification_type = "success";
+                    } else {
+                        throw new Exception("Error updating profile picture in database: " . mysqli_error($conn));
+                    }
+                } else {
+                    throw new Exception("Error uploading file");
+                }
+            } else {
+                throw new Exception("No file uploaded or error in upload");
+            }
+        } catch (Exception $e) {
+            debug_log("Error: " . $e->getMessage());
+            $notification = $e->getMessage();
+            $notification_type = "error";
+        }
+    } elseif (isset($_POST['theme_submit'])) {
+        // Process theme preference
+        $theme = mysqli_real_escape_string($conn, $_POST['theme']);
+        
+        // Store theme preference in session and cookie
+        $_SESSION['theme'] = $theme;
+        setcookie('mura_theme', $theme, time() + (86400 * 365), "/"); // Cookie valid for 1 year
+        
+        $notification = "Theme preference saved!";
+        $notification_type = "success";
     }
+    
+    // Force commit any pending transactions
+    mysqli_commit($conn);
+    debug_log("Forced commit of any pending transactions");
 }
 
-// Get current user data
-$stmt = $conn->prepare("
-    SELECT u.username, u.email, u.onboarding_complete, uo.selected_language, uo.daily_goal, uo.proficiency_level, uo.reason,
-           l.first_name, l.last_name, l.date_of_birth, l.phone_number, l.gender, l.address,
-           COALESCE(us.level, 1) as user_level
-    FROM users u 
-    LEFT JOIN user_onboarding uo ON u.user_ID = uo.user_ID 
-    LEFT JOIN learner l ON u.user_ID = l.user_ID
-    LEFT JOIN user_stats us ON u.user_ID = us.user_id
-    WHERE u.user_ID = ?
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
+// Get current user data - AFTER any updates to ensure we have the latest data
+$sql = "SELECT u.username, u.email, u.onboarding_complete, u.profile_picture,
+       uo.selected_language, uo.daily_goal, uo.proficiency_level, uo.reason,
+       l.first_name, l.last_name, l.date_of_birth, l.phone_number, l.gender, l.address,
+       COALESCE(us.level, 1) as user_level, COALESCE(us.xp, 0) as user_xp
+FROM users u 
+LEFT JOIN user_onboarding uo ON u.user_ID = uo.user_ID 
+LEFT JOIN learner l ON u.user_ID = l.user_ID
+LEFT JOIN user_stats us ON u.user_ID = us.user_id
+WHERE u.user_ID = ?";
 
-if ($result->num_rows === 0) {
+debug_log("Fetching user data with SQL: $sql");
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
+if (mysqli_num_rows($result) === 0) {
+    debug_log("No user found with ID: $user_id");
     header("Location: ../Login/signin.php");
     exit();
 }
 
-$user = $result->fetch_assoc();
+$user = mysqli_fetch_assoc($result);
+debug_log("User data retrieved: " . json_encode($user));
 
 // Get streak data
-$streakStmt = $conn->prepare("SELECT current_streak FROM user_streaks WHERE user_id = ?");
-$streakStmt->bind_param("i", $user_id);
-$streakStmt->execute();
-$streakResult = $streakStmt->get_result();
+$sql = "SELECT current_streak, longest_streak, last_play_date FROM user_streaks WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$streakResult = mysqli_stmt_get_result($stmt);
 $streak = 0;
-if ($streakRow = $streakResult->fetch_assoc()) {
+$longest_streak = 0;
+$last_play_date = null;
+if ($streakRow = mysqli_fetch_assoc($streakResult)) {
     $streak = $streakRow['current_streak'];
+    $longest_streak = $streakRow['longest_streak'];
+    $last_play_date = $streakRow['last_play_date'];
 }
+
+// Get XP level thresholds
+$sql = "SELECT level, xp_required FROM xp_level_thresholds ORDER BY level ASC";
+$levelResult = mysqli_query($conn, $sql);
+$levels = [];
+while ($row = mysqli_fetch_assoc($levelResult)) {
+    $levels[$row['level']] = $row['xp_required'];
+}
+
+// Calculate XP progress to next level
+$current_level = $user['user_level'];
+$current_xp = $user['user_xp'];
+$next_level = $current_level + 1;
+$xp_for_current_level = isset($levels[$current_level]) ? $levels[$current_level] : 0;
+$xp_for_next_level = isset($levels[$next_level]) ? $levels[$next_level] : $xp_for_current_level + 1000;
+$xp_needed = $xp_for_next_level - $xp_for_current_level;
+$xp_progress = $current_xp - $xp_for_current_level;
+$xp_percentage = ($xp_needed > 0) ? min(100, round(($xp_progress / $xp_needed) * 100)) : 100;
 
 // Get current date for greeting
 $hour = date('H');
@@ -192,6 +374,9 @@ if ($hour < 12) {
 } else {
     $greeting = "Good evening";
 }
+
+// Get theme preference
+$theme = isset($_SESSION['theme']) ? $_SESSION['theme'] : 'light';
 
 // Function to get flag emoji based on language
 function getLanguageFlag($language) {
@@ -211,25 +396,87 @@ function getLanguageFlag($language) {
     
     return $flags[$language] ?? '🌐';
 }
+
+// Get user achievements
+$sql = "SELECT COUNT(*) as completed_lessons FROM user_lesson_progress WHERE user_id = ? AND completed = 1";
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$row = mysqli_fetch_assoc($result);
+$completed_lessons = $row['completed_lessons'];
+
+// Get game stats
+$sql = "SELECT total_games_played, total_questions_answered, correct_answers FROM user_stats WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$game_stats = mysqli_fetch_assoc($result);
+$accuracy = 0;
+if ($game_stats && $game_stats['total_questions_answered'] > 0) {
+    $accuracy = round(($game_stats['correct_answers'] / $game_stats['total_questions_answered']) * 100);
+}
+
+// Get available languages for learning
+$sql = "SELECT DISTINCT language FROM lesson_content ORDER BY language";
+$result = mysqli_query($conn, $sql);
+$available_languages = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $available_languages[] = $row['language'];
+}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="<?php echo $theme; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | Mura</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #5a3b5d;
+            --primary-light: #7e57c2;
+            --primary-dark: #3f3d56;
+            --accent-color: #b39ddb;
+            --text-color: #333;
+            --text-light: #666;
+            --bg-color: #f5f7fa;
+            --card-bg: #fff;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #7e57c2;
+            --primary-light: #9575cd;
+            --primary-dark: #5e35b1;
+            --accent-color: #b39ddb;
+            --text-color: #e0e0e0;
+            --text-light: #aaa;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         body {
-            background-color: #f5f7fa;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-color);
         }
 
         .app-container {
@@ -240,7 +487,7 @@ function getLanguageFlag($language) {
         /* Sidebar Styles */
         .sidebar {
             width: 250px;
-            background: linear-gradient(180deg, #5a3b5d 0%, #3f3d56 100%);
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -284,7 +531,7 @@ function getLanguageFlag($language) {
         .logo h1 {
             font-size: 28px;
             font-weight: bold;
-            color: #b39ddb;
+            color: var(--accent-color);
             letter-spacing: 2px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
@@ -315,13 +562,13 @@ function getLanguageFlag($language) {
 
         .nav-item a:hover {
             background-color: rgba(179, 157, 219, 0.1);
-            border-left: 3px solid #b39ddb;
+            border-left: 3px solid var(--accent-color);
         }
 
         .nav-item.active a {
             background-color: rgba(179, 157, 219, 0.2);
-            border-left: 3px solid #b39ddb;
-            color: #b39ddb;
+            border-left: 3px solid var(--accent-color);
+            color: var(--accent-color);
         }
 
         .nav-item i {
@@ -357,7 +604,7 @@ function getLanguageFlag($language) {
         /* Main Content Styles */
         .main-content {
             flex: 1;
-            background-color: #f5f7fa;
+            background-color: var(--bg-color);
             margin-left: 250px;
             position: relative;
             width: calc(100% - 250px);
@@ -369,8 +616,11 @@ function getLanguageFlag($language) {
             justify-content: space-between;
             align-items: center;
             padding: 15px 30px;
-            background-color: #fff;
+            background-color: var(--card-bg);
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .menu-toggle {
@@ -391,11 +641,13 @@ function getLanguageFlag($language) {
         .level-indicator {
             display: flex;
             align-items: center;
-            background-color: #fff;
+            background-color: var(--card-bg);
             padding: 8px 15px;
             border-radius: 20px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            border: 1px solid #eee;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
         }
 
         .level-badge {
@@ -404,10 +656,11 @@ function getLanguageFlag($language) {
             justify-content: center;
             width: 28px;
             height: 28px;
-            background: linear-gradient(135deg, #7e57c2, #5a3b5d);
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
             border-radius: 50%;
             margin-right: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1;
         }
 
         .level-number {
@@ -418,23 +671,34 @@ function getLanguageFlag($language) {
 
         .level-label {
             font-size: 14px;
-            color: #666;
+            color: var(--text-light);
+            z-index: 1;
+        }
+
+        .xp-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(126, 87, 194, 0.1), rgba(126, 87, 194, 0.05));
+            z-index: 0;
+            transition: width 1s ease-in-out;
         }
 
         .streak-counter {
             display: flex;
             align-items: center;
-            background-color: #fff;
+            background-color: var(--card-bg);
             padding: 8px 15px;
             border-radius: 20px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            border: 1px solid #eee;
+            border: 1px solid var(--border-color);
         }
 
         .streak-number {
             font-size: 18px;
             font-weight: bold;
-            color: #5a3b5d;
+            color: var(--primary-color);
             margin-right: 5px;
         }
 
@@ -466,17 +730,17 @@ function getLanguageFlag($language) {
 
         .streak-label {
             font-size: 14px;
-            color: #666;
+            color: var(--text-light);
         }
 
         .language-indicator {
             display: flex;
             align-items: center;
-            background-color: #fff;
+            background-color: var(--card-bg);
             padding: 8px 15px;
             border-radius: 20px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            border: 1px solid #eee;
+            border: 1px solid var(--border-color);
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -489,7 +753,7 @@ function getLanguageFlag($language) {
         .language-name {
             font-size: 14px;
             font-weight: 500;
-            color: #5a3b5d;
+            color: var(--primary-color);
             margin-right: 8px;
         }
 
@@ -497,6 +761,22 @@ function getLanguageFlag($language) {
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.1);
         }
 
         /* Content Styles */
@@ -514,19 +794,21 @@ function getLanguageFlag($language) {
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            color: #5a3b5d;
+            color: var(--primary-color);
         }
 
         .subtitle {
-            color: #666;
+            color: var(--text-light);
             font-size: 1rem;
         }
 
         /* Tabs */
         .tabs {
             display: flex;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             margin-bottom: 2rem;
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
 
         .tab {
@@ -535,15 +817,16 @@ function getLanguageFlag($language) {
             font-weight: 500;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .tab:hover {
-            color: #5a3b5d;
+            color: var(--primary-color);
         }
 
         .tab.active {
-            color: #5a3b5d;
-            border-bottom-color: #5a3b5d;
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
         }
 
         .tab-content {
@@ -552,19 +835,32 @@ function getLanguageFlag($language) {
 
         .tab-content.active {
             display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Card Styles */
         .card {
-            background-color: #fff;
+            background-color: var(--card-bg);
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             margin-bottom: 2rem;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
 
         .card-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             background-color: rgba(90, 59, 93, 0.05);
         }
 
@@ -572,11 +868,11 @@ function getLanguageFlag($language) {
             font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #5a3b5d;
+            color: var(--primary-color);
         }
 
         .card-description {
-            color: #6b7280;
+            color: var(--text-light);
             font-size: 0.875rem;
         }
 
@@ -586,7 +882,7 @@ function getLanguageFlag($language) {
 
         .card-footer {
             padding: 1.5rem;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: flex-end;
             background-color: rgba(90, 59, 93, 0.02);
@@ -619,22 +915,23 @@ function getLanguageFlag($language) {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #5a3b5d;
+            color: var(--primary-color);
         }
 
         .form-control {
             width: 100%;
             padding: 0.625rem;
             font-size: 1rem;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color);
             border-radius: 0.375rem;
-            background-color: #fff;
+            background-color: var(--card-bg);
+            color: var(--text-color);
             transition: border-color 0.15s ease-in-out;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #5a3b5d;
+            border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(90, 59, 93, 0.1);
         }
 
@@ -642,9 +939,10 @@ function getLanguageFlag($language) {
             width: 100%;
             padding: 0.625rem;
             font-size: 1rem;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color);
             border-radius: 0.375rem;
-            background-color: #fff;
+            background-color: var(--card-bg);
+            color: var(--text-color);
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a3b5d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
@@ -654,7 +952,7 @@ function getLanguageFlag($language) {
 
         .form-select:focus {
             outline: none;
-            border-color: #5a3b5d;
+            border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(90, 59, 93, 0.1);
         }
 
@@ -667,7 +965,7 @@ function getLanguageFlag($language) {
             display: block;
             margin-top: 0.25rem;
             font-size: 0.875rem;
-            color: #6b7280;
+            color: var(--text-light);
         }
 
         /* Button Styles */
@@ -691,15 +989,26 @@ function getLanguageFlag($language) {
 
         .btn-primary {
             color: #fff;
-            background-color: #5a3b5d;
-            border-color: #5a3b5d;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
         .btn-primary:hover {
-            background-color: #7e57c2;
-            border-color: #7e57c2;
+            background-color: var(--primary-light);
+            border-color: var(--primary-light);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            color: var(--text-color);
+            background-color: transparent;
+            border-color: var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
         }
 
         /* Notification Styles */
@@ -708,18 +1017,154 @@ function getLanguageFlag($language) {
             margin-bottom: 1.5rem;
             border-radius: 0.375rem;
             font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.5s ease;
         }
 
         .notification-success {
             background-color: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #10b981;
+            color: var(--success-color);
         }
 
         .notification-error {
             background-color: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+            color: var(--error-color);
+        }
+
+        .notification-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: var(--warning-color);
+        }
+
+        .notification i {
+            margin-right: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Avatar Upload */
+        .avatar-upload {
+            position: relative;
+            max-width: 200px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .avatar-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin: 0 auto 1rem;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-edit {
+            position: absolute;
+            right: 10px;
+            bottom: 5px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .avatar-edit input {
+            display: none;
+        }
+
+        .avatar-edit label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            margin-bottom: 0;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .avatar-edit label:hover {
+            background-color: var(--primary-light);
+            transform: scale(1.1);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        /* Debug Info Styles */
+        .debug-section {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+        }
+
+        .debug-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+            color: var(--text-color);
         }
 
         /* Loading Spinner */
@@ -746,6 +1191,61 @@ function getLanguageFlag($language) {
 
         .hidden {
             display: none;
+        }
+
+        /* Theme cards */
+        .theme-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .theme-card {
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .theme-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-preview {
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .theme-header {
+            height: 30%;
+            background-color: #5a3b5d;
+        }
+
+        .theme-body {
+            height: 70%;
+            background-color: #f5f7fa;
+            padding: 10px;
+        }
+
+        .theme-dark .theme-body {
+            background-color: #121212;
+        }
+
+        .theme-name {
+            text-align: center;
+            padding: 0.5rem;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-weight: 500;
         }
 
         /* Responsive Styles */
@@ -813,13 +1313,17 @@ function getLanguageFlag($language) {
             }
 
             .tab {
-                border-bottom: 1px solid #e5e7eb;
+                border-bottom: 1px solid var(--border-color);
                 text-align: center;
             }
 
             .tab.active {
-                border-bottom: 1px solid #5a3b5d;
+                border-bottom: 1px solid var(--primary-color);
                 background-color: rgba(90, 59, 93, 0.05);
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -909,13 +1413,14 @@ function getLanguageFlag($language) {
                     <i class="fas fa-bars"></i>
                 </div>
                 <div class="left-stats">
-                    <div class="level-indicator">
+                    <div class="level-indicator" title="<?php echo $xp_progress; ?> / <?php echo $xp_needed; ?> XP to next level">
+                        <div class="xp-progress" style="width: <?php echo $xp_percentage; ?>%"></div>
                         <div class="level-badge">
                             <span class="level-number"><?php echo $user['user_level']; ?></span>
                         </div>
                         <span class="level-label">Level</span>
                     </div>
-                    <div class="streak-counter">
+                    <div class="streak-counter" title="Current streak: <?php echo $streak; ?> days">
                         <span class="streak-number"><?php echo $streak; ?></span>
                         <div class="streak-icon">
                             <span class="fire-emoji">🔥</span>
@@ -924,21 +1429,25 @@ function getLanguageFlag($language) {
                     </div>
                 </div>
                 <div class="language-indicator">
-                    <span class="language-name"><?php echo htmlspecialchars($user['selected_language']); ?></span>
+                    <span class="language-name"><?php echo htmlspecialchars($user['selected_language'] ?? 'Select Language'); ?></span>
                     <div class="language-flag">
-                        <span><?php echo getLanguageFlag($user['selected_language']); ?></span>
+                        <span><?php echo getLanguageFlag($user['selected_language'] ?? ''); ?></span>
                     </div>
                 </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">
+                    <i class="fas <?php echo $theme === 'dark' ? 'fa-sun' : 'fa-moon'; ?>"></i>
+                </button>
             </div>
             
             <div class="content">
                 <div class="header">
-                    <h1><?php echo $greeting; ?>, <?php echo htmlspecialchars($user['first_name']); ?>!</h1>
+                    <h1><?php echo $greeting; ?>, <?php echo htmlspecialchars($user['first_name'] ?? $user['username']); ?>!</h1>
                     <p class="subtitle">Manage your account settings and preferences</p>
                 </div>
                 
                 <?php if (!empty($notification)): ?>
-                <div class="notification notification-<?php echo $notificationType; ?>">
+                <div class="notification notification-<?php echo $notification_type; ?>">
+                    <i class="fas <?php echo $notification_type === 'success' ? 'fa-check-circle' : ($notification_type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'); ?>"></i>
                     <?php echo $notification; ?>
                 </div>
                 <?php endif; ?>
@@ -947,10 +1456,47 @@ function getLanguageFlag($language) {
                     <div class="tab active" data-tab="profile">Profile Settings</div>
                     <div class="tab" data-tab="security">Privacy & Security</div>
                     <div class="tab" data-tab="language">Language Preferences</div>
+                    <div class="tab" data-tab="appearance">Appearance</div>
+                    <div class="tab" data-tab="stats">Learning Stats</div>
+                    <div class="tab" data-tab="debug">Debug Info</div>
                 </div>
                 
                 <!-- Profile Settings Tab -->
                 <div id="profile" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Profile Picture</h2>
+                            <p class="card-description">Upload a profile picture to personalize your account</p>
+                        </div>
+                        <form id="avatarForm" method="POST" action="" enctype="multipart/form-data">
+                            <div class="card-content">
+                                <div class="avatar-upload">
+                                    <div class="avatar-preview">
+                                        <img id="imagePreview" src="<?php echo !empty($user['profile_picture']) ? '../' . $user['profile_picture'] : '../image/default-avatar.png'; ?>" alt="Profile Picture">
+                                        <div class="avatar-edit">
+                                            <input type="file" id="avatarUpload" name="avatar" accept=".png, .jpg, .jpeg" onchange="previewImage(this)">
+                                            <label for="avatarUpload">
+                                                <i class="fas fa-camera"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="form-text text-center">Click the camera icon to upload a new profile picture</p>
+                            </div>
+                            <div class="card-footer">
+                                <button type="submit" name="avatar_submit" class="btn btn-primary" id="avatarSubmitBtn">
+                                    <span class="btn-text">Save Profile Picture</span>
+                                    <span class="loading hidden">
+                                        <svg class="loading-spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="32" stroke-dashoffset="8"></circle>
+                                        </svg>
+                                        Saving...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
                     <div class="card">
                         <div class="card-header">
                             <h2 class="card-title">Profile Information</h2>
@@ -999,15 +1545,10 @@ function getLanguageFlag($language) {
                                 </div>
                             </div>
                             <div class="card-footer">
-                                <button type="submit" name="profile_submit" class="btn btn-primary" id="profileSubmitBtn">
-                                    <span class="btn-text">Save Changes</span>
-                                    <span class="loading hidden">
-                                        <svg class="loading-spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="32" stroke-dashoffset="8"></circle>
-                                        </svg>
-                                        Saving...
-                                    </span>
-                                </button>
+                                <a href="edit-profile.php" class="btn btn-primary" id="profileEditBtn">
+                                    <span class="btn-text">Edit Info</span>
+                                    <i class="fas fa-edit ml-2"></i>
+                                </a>
                             </div>
                         </form>
                     </div>
@@ -1127,6 +1668,181 @@ function getLanguageFlag($language) {
                         </form>
                     </div>
                 </div>
+                
+                <!-- Appearance Tab -->
+                <div id="appearance" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Theme Settings</h2>
+                            <p class="card-description">Customize the appearance of your Mura experience</p>
+                        </div>
+                        <form id="themeForm" method="POST" action="">
+                            <div class="card-content">
+                                <div class="theme-cards">
+                                    <div class="theme-card <?php echo $theme === 'light' ? 'active' : ''; ?>" data-theme="light">
+                                        <div class="theme-preview">
+                                            <div class="theme-header"></div>
+                                            <div class="theme-body"></div>
+                                        </div>
+                                        <div class="theme-name">Light Mode</div>
+                                    </div>
+                                    <div class="theme-card theme-dark <?php echo $theme === 'dark' ? 'active' : ''; ?>" data-theme="dark">
+                                        <div class="theme-preview">
+                                            <div class="theme-header"></div>
+                                            <div class="theme-body"></div>
+                                        </div>
+                                        <div class="theme-name">Dark Mode</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="theme" id="themeInput" value="<?php echo $theme; ?>">
+                            </div>
+                            <div class="card-footer">
+                                <button type="submit" name="theme_submit" class="btn btn-primary" id="themeSubmitBtn">
+                                    <span class="btn-text">Save Theme</span>
+                                    <span class="loading hidden">
+                                        <svg class="loading-spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="32" stroke-dashoffset="8"></circle>
+                                        </svg>
+                                        Saving...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Learning Stats Tab -->
+                <div id="stats" class="tab-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $user['user_level']; ?></div>
+                            <div class="stat-label">Current Level</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $streak; ?></div>
+                            <div class="stat-label">Current Streak</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-award"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $longest_streak; ?></div>
+                            <div class="stat-label">Longest Streak</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="stat-value"><?php echo $user['user_xp']; ?></div>
+                            <div class="stat-label">Total XP</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Learning Progress</h2>
+                            <p class="card-description">Track your language learning journey</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="stat-value"><?php echo $completed_lessons; ?></div>
+                                    <div class="stat-label">Lessons Completed</div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-gamepad"></i>
+                                    </div>
+                                    <div class="stat-value"><?php echo $game_stats['total_games_played'] ?? 0; ?></div>
+                                    <div class="stat-label">Games Played</div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div class="stat-value"><?php echo $game_stats['correct_answers'] ?? 0; ?></div>
+                                    <div class="stat-label">Correct Answers</div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-bullseye"></i>
+                                    </div>
+                                    <div class="stat-value"><?php echo $accuracy; ?>%</div>
+                                    <div class="stat-label">Accuracy</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 20px;">
+                                <label>XP Progress to Level <?php echo $next_level; ?></label>
+                                <div style="background-color: var(--border-color); height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px;">
+                                    <div style="background: linear-gradient(90deg, var(--primary-light), var(--primary-color)); height: 100%; width: <?php echo $xp_percentage; ?>%; transition: width 1s ease-in-out;"></div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                                    <small><?php echo $xp_progress; ?> / <?php echo $xp_needed; ?> XP</small>
+                                    <small><?php echo $xp_percentage; ?>% Complete</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debug Info Tab -->
+                <div id="debug" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Debug Information</h2>
+                            <p class="card-description">Technical information to help troubleshoot issues</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="debug-section">
+                                <h3>Database Connection</h3>
+                                <div class="debug-info">
+                                    <?php
+                                    echo "Connection Status: " . (mysqli_ping($conn) ? "Connected" : "Not Connected") . "\n";
+                                    echo "Connection Error: " . mysqli_connect_error() . "\n";
+                                    echo "Connection Errno: " . mysqli_connect_errno() . "\n";
+                                    ?>
+                                </div>
+                            </div>
+                            
+                            <div class="debug-section">
+                                <h3>User Information</h3>
+                                <div class="debug-info">
+                                    <?php
+                                    echo "User ID: " . $user_id . "\n";
+                                    echo "User Data: " . print_r($user, true) . "\n";
+                                    ?>
+                                </div>
+                            </div>
+                            
+                            <div class="debug-section">
+                                <h3>Debug Log</h3>
+                                <div class="debug-info">
+                                    <?php
+                                    foreach ($debug_info as $info) {
+                                        echo htmlspecialchars($info) . "\n";
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1166,8 +1882,8 @@ function getLanguageFlag($language) {
             }
             
             // Form submission handling with loading state
-            const forms = ["profileForm", "securityForm", "languageForm"];
-            const buttons = ["profileSubmitBtn", "securitySubmitBtn", "languageSubmitBtn"];
+            const forms = ["profileForm", "securityForm", "languageForm", "avatarForm", "themeForm"];
+            const buttons = ["profileSubmitBtn", "securitySubmitBtn", "languageSubmitBtn", "avatarSubmitBtn", "themeSubmitBtn"];
             
             forms.forEach((formId, index) => {
                 const form = document.getElementById(formId);
@@ -1179,9 +1895,11 @@ function getLanguageFlag($language) {
                         const btnText = button.querySelector(".btn-text");
                         const loading = button.querySelector(".loading");
                         
-                        btnText.classList.add("hidden");
-                        loading.classList.remove("hidden");
-                        button.disabled = true;
+                        if (btnText && loading) {
+                            btnText.classList.add("hidden");
+                            loading.classList.remove("hidden");
+                            button.disabled = true;
+                        }
                     });
                 }
             });
@@ -1209,6 +1927,61 @@ function getLanguageFlag($language) {
                 });
             }
             
+            // Theme toggle
+            const themeToggle = document.getElementById("themeToggle");
+            if (themeToggle) {
+                themeToggle.addEventListener("click", () => {
+                    const html = document.documentElement;
+                    const currentTheme = html.getAttribute("data-theme");
+                    const newTheme = currentTheme === "dark" ? "light" : "dark";
+                    
+                    html.setAttribute("data-theme", newTheme);
+                    themeToggle.innerHTML = newTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                    
+                    // Update theme input
+                    const themeInput = document.getElementById("themeInput");
+                    if (themeInput) {
+                        themeInput.value = newTheme;
+                    }
+                    
+                    // Update theme cards
+                    const themeCards = document.querySelectorAll(".theme-card");
+                    themeCards.forEach(card => {
+                        card.classList.remove("active");
+                        if (card.getAttribute("data-theme") === newTheme) {
+                            card.classList.add("active");
+                        }
+                    });
+                });
+            }
+            
+            // Theme card selection
+            const themeCards = document.querySelectorAll(".theme-card");
+            themeCards.forEach(card => {
+                card.addEventListener("click", () => {
+                    const theme = card.getAttribute("data-theme");
+                    
+                    // Update theme input
+                    const themeInput = document.getElementById("themeInput");
+                    if (themeInput) {
+                        themeInput.value = theme;
+                    }
+                    
+                    // Update active card
+                    themeCards.forEach(c => c.classList.remove("active"));
+                    card.classList.add("active");
+                    
+                    // Update document theme
+                    document.documentElement.setAttribute("data-theme", theme);
+                    
+                    // Update theme toggle icon
+                    const themeToggle = document.getElementById("themeToggle");
+                    if (themeToggle) {
+                        themeToggle.innerHTML = theme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                    }
+                });
+            });
+            
             // Auto-hide notifications after 5 seconds
             const notification = document.querySelector(".notification");
             if (notification) {
@@ -1222,6 +1995,19 @@ function getLanguageFlag($language) {
                 }, 5000);
             }
         });
+        
+        // Image preview function
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
     </script>
 </body>
 </html>
