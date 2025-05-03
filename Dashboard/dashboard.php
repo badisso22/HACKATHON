@@ -10,10 +10,12 @@ $user_id = $_SESSION['user_id'];
 
 $stmt = $conn->prepare("
     SELECT u.username, u.onboarding_complete, uo.selected_language, uo.daily_goal, uo.proficiency_level,
-           l.first_name, l.last_name
+           l.first_name, l.last_name, COALESCE(us.level, 1) as user_level, COALESCE(ustreak.current_streak, 0) as current_streak
     FROM users u 
     LEFT JOIN user_onboarding uo ON u.user_ID = uo.user_ID 
     LEFT JOIN learner l ON u.user_ID = l.user_ID
+    LEFT JOIN user_stats us ON u.user_ID = us.user_id
+    LEFT JOIN user_streaks ustreak ON u.user_ID = ustreak.user_id
     WHERE u.user_ID = ?
 ");
 $stmt->bind_param("i", $user_id);
@@ -38,8 +40,10 @@ $selected_language = $user['selected_language'] ?? 'Spanish';
 $daily_goal = $user['daily_goal'] ?? '3 min';
 $proficiency_level = $user['proficiency_level'] ?? 'Beginner';
 
-$daily_progress = 35; 
-$user_level = 1;
+$daily_progress = 35; // You might want to calculate this dynamically based on user activity
+$user_level = $user['user_level'] ?? 1;
+$current_streak = $user['current_streak'] ?? 0;
+
 function getLanguageFlag($language) {
     $flags = [
         'Spanish' => '🇪🇸',
@@ -654,11 +658,12 @@ body {
   width: 100%;
 }
 
+/* Fix for flip-card flipping */
 .flip-card {
   background-color: transparent;
   width: 100%;
   height: 220px;
-  perspective: 1200px;
+  perspective: 1000px; /* Ensure perspective is applied */
   margin-bottom: 20px;
   cursor: pointer;
 }
@@ -668,14 +673,14 @@ body {
   width: 100%;
   height: 100%;
   text-align: center;
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
+  transition: transform 0.6s; /* Smooth transition */
+  transform-style: preserve-3d; /* Enable 3D transform */
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   border-radius: 15px;
 }
 
 .flip-card.flipped .flip-card-inner {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg); /* Flip the card */
 }
 
 .flip-card-front,
@@ -683,8 +688,7 @@ body {
   position: absolute;
   width: 100%;
   height: 100%;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  backface-visibility: hidden; /* Hide back side when not flipped */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -696,40 +700,12 @@ body {
 .flip-card-front {
   background: linear-gradient(145deg, #f9f4ff, #f0e6ff);
   border: 1px solid #e6d9ff;
-  position: relative;
-  overflow: hidden;
-}
-
-.flip-card-front::before {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
-  opacity: 0.6;
-  pointer-events: none;
 }
 
 .flip-card-back {
   background: linear-gradient(145deg, #5a3b5d, #7e57c2);
   color: white;
-  transform: rotateY(180deg);
-  position: relative;
-  overflow: hidden;
-}
-
-.flip-card-back::after {
-  content: "";
-  position: absolute;
-  bottom: -30px;
-  right: -30px;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
-  border-radius: 50%;
-  pointer-events: none;
+  transform: rotateY(180deg); /* Ensure back is rotated */
 }
 
 .vocabulary-word {
@@ -1076,7 +1052,7 @@ body {
                         <span class="level-label">Level</span>
                     </div>
                     <div class="streak-counter">
-                        <span class="streak-number">0</span>
+                        <span class="streak-number"><?php echo $current_streak; ?></span>
                         <div class="streak-icon">
                             <span class="fire-emoji">🔥</span>
                         </div>
@@ -1123,7 +1099,9 @@ body {
                                         <p><?php echo htmlspecialchars($lesson['description']); ?></p>
                                         <span class="lesson-duration"><i class="far fa-clock"></i> <?php echo htmlspecialchars($lesson['duration']); ?></span>
                                     </div>
-                                    <button class="lesson-start-btn"><i class="fas fa-play"></i></button>
+                                    <a href="#" class="lesson-link"> 
+                                        <button class="lesson-start-btn"><i class="fas fa-play"></i></button>
+                                    </a>
                                 </li>
                                 <?php endforeach; ?>
                             </ul>
