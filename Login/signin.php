@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
+<body>
   <div class="background-words-container" id="backgroundWords">
   </div>
 
@@ -95,10 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="auth-link">
           Don't have an account? <a href="signup.php">Sign Up</a>
+          <a href="../homepage.php" class="home-link">Back to Home Page</a>
         </div>
       </form>
     </div>
   </div>
+
 
   <script src="../js/auth.js"></script>
 </body>
