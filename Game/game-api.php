@@ -119,6 +119,23 @@ switch ($action) {
         echo json_encode($response);
         break;
         
+    case 'changeLanguage':
+        $userId = $_SESSION['user_id'];
+        $language = isset($_POST['language']) ? $_POST['language'] : '';
+        
+        if (!empty($language)) {
+            $result = changeUserLanguage($userId, $language);
+            echo json_encode(['success' => $result]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid language']);
+        }
+        break;
+        
+    case 'getAvailableLanguages':
+        $languages = getAvailableLanguages();
+        echo json_encode(['success' => true, 'languages' => $languages]);
+        break;
+        
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }
@@ -139,6 +156,33 @@ function getUserLanguage($userId) {
     
     // Default to Spanish if no language is set
     return 'Spanish';
+}
+
+// Change user's selected language
+function changeUserLanguage($userId, $language) {
+    global $conn;
+    
+    $sql = "UPDATE user_onboarding SET selected_language = ? WHERE user_ID = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("si", $language, $userId);
+    
+    return $stmt->execute();
+}
+
+// Get all available languages
+function getAvailableLanguages() {
+    global $conn;
+    
+    $languages = [];
+    
+    $sql = "SELECT DISTINCT language FROM game_bosses ORDER BY language";
+    $result = $conn->query($sql);
+    
+    while ($row = $result->fetch_assoc()) {
+        $languages[] = $row['language'];
+    }
+    
+    return $languages;
 }
 
 // Get bosses for a specific language
@@ -242,7 +286,57 @@ function getNextQuestion($bossId, $usedQuestionIds = []) {
         
         $options = [];
         while ($option = $optionsResult->fetch_assoc()) {
-            $options[] = $option['option_text'];
+            // Filter out any remaining generic wrong answers
+            $optionText = $option['option_text'];
+            if (strpos($optionText, 'Falsche Antwort') === false && 
+                strpos($optionText, 'Risposta Sbagliata') === false) {
+                $options[] = $optionText;
+            }
+        }
+        
+        // Make sure the correct answer is in the options
+        if (!in_array($question['correct_answer'], $options)) {
+            $options[] = $question['correct_answer'];
+        }
+        
+        // If we don't have enough options, get some from other questions of the same boss
+        if (count($options) < 3) {
+            $otherOptionsSql = "SELECT DISTINCT qo.option_text 
+                               FROM question_options qo 
+                               JOIN boss_questions bq ON qo.question_id = bq.question_id 
+                               WHERE bq.boss_id = ? 
+                               AND qo.option_text != ? 
+                               AND qo.option_text NOT LIKE 'Falsche Antwort%'
+                               AND qo.option_text NOT LIKE 'Risposta Sbagliata%'
+                               ORDER BY RAND() 
+                               LIMIT ?";
+            $otherOptionsStmt = $conn->prepare($otherOptionsSql);
+            $neededOptions = 3 - count($options);
+            $otherOptionsStmt->bind_param("isi", $bossId, $question['correct_answer'], $neededOptions);
+            $otherOptionsStmt->execute();
+            $otherOptionsResult = $otherOptionsStmt->get_result();
+            
+            while ($otherOption = $otherOptionsResult->fetch_assoc()) {
+                if (!in_array($otherOption['option_text'], $options)) {
+                    $options[] = $otherOption['option_text'];
+                }
+            }
+        }
+        
+        // Limit to 3 options
+        if (count($options) > 3) {
+            // Keep the correct answer and randomly select others
+            $correctAnswer = $question['correct_answer'];
+            $otherOptions = array_filter($options, function($option) use ($correctAnswer) {
+                return $option !== $correctAnswer;
+            });
+            
+            // Shuffle and take only what we need
+            shuffle($otherOptions);
+            $otherOptions = array_slice($otherOptions, 0, 2);
+            
+            // Combine with correct answer
+            $options = array_merge([$correctAnswer], $otherOptions);
         }
         
         // Format question data
@@ -271,7 +365,57 @@ function getNextQuestion($bossId, $usedQuestionIds = []) {
         
         $options = [];
         while ($option = $optionsResult->fetch_assoc()) {
-            $options[] = $option['option_text'];
+            // Filter out any remaining generic wrong answers
+            $optionText = $option['option_text'];
+            if (strpos($optionText, 'Falsche Antwort') === false && 
+                strpos($optionText, 'Risposta Sbagliata') === false) {
+                $options[] = $optionText;
+            }
+        }
+        
+        // Make sure the correct answer is in the options
+        if (!in_array($question['correct_answer'], $options)) {
+            $options[] = $question['correct_answer'];
+        }
+        
+        // If we don't have enough options, get some from other questions of the same boss
+        if (count($options) < 3) {
+            $otherOptionsSql = "SELECT DISTINCT qo.option_text 
+                               FROM question_options qo 
+                               JOIN boss_questions bq ON qo.question_id = bq.question_id 
+                               WHERE bq.boss_id = ? 
+                               AND qo.option_text != ? 
+                               AND qo.option_text NOT LIKE 'Falsche Antwort%'
+                               AND qo.option_text NOT LIKE 'Risposta Sbagliata%'
+                               ORDER BY RAND() 
+                               LIMIT ?";
+            $otherOptionsStmt = $conn->prepare($otherOptionsSql);
+            $neededOptions = 3 - count($options);
+            $otherOptionsStmt->bind_param("isi", $bossId, $question['correct_answer'], $neededOptions);
+            $otherOptionsStmt->execute();
+            $otherOptionsResult = $otherOptionsStmt->get_result();
+            
+            while ($otherOption = $otherOptionsResult->fetch_assoc()) {
+                if (!in_array($otherOption['option_text'], $options)) {
+                    $options[] = $otherOption['option_text'];
+                }
+            }
+        }
+        
+        // Limit to 3 options
+        if (count($options) > 3) {
+            // Keep the correct answer and randomly select others
+            $correctAnswer = $question['correct_answer'];
+            $otherOptions = array_filter($options, function($option) use ($correctAnswer) {
+                return $option !== $correctAnswer;
+            });
+            
+            // Shuffle and take only what we need
+            shuffle($otherOptions);
+            $otherOptions = array_slice($otherOptions, 0, 2);
+            
+            // Combine with correct answer
+            $options = array_merge([$correctAnswer], $otherOptions);
         }
         
         // Format question data
@@ -321,6 +465,22 @@ function getUserProgress($userId, $language) {
 function getUserStats($userId) {
     global $conn;
     
+    // Check if user has stats record
+    $checkSql = "SELECT COUNT(*) as count FROM user_stats WHERE user_id = ?";
+    $checkStmt = $conn->prepare($checkSql);
+    $checkStmt->bind_param("i", $userId);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+    $checkRow = $checkResult->fetch_assoc();
+    
+    // If no stats record exists, create one
+    if ($checkRow['count'] == 0) {
+        $insertSql = "INSERT INTO user_stats (user_id, xp, level) VALUES (?, 0, 1)";
+        $insertStmt = $conn->prepare($insertSql);
+        $insertStmt->bind_param("i", $userId);
+        $insertStmt->execute();
+    }
+    
     $sql = "SELECT us.*, xlt.xp_required as current_level_xp, 
            (SELECT xp_required FROM xp_level_thresholds WHERE level = us.level + 1) as next_level_xp 
            FROM user_stats us 
@@ -358,6 +518,22 @@ function getUserStats($userId) {
 // Get user streak information
 function getUserStreak($userId) {
     global $conn;
+    
+    // Check if user has streak record
+    $checkSql = "SELECT COUNT(*) as count FROM user_streaks WHERE user_id = ?";
+    $checkStmt = $conn->prepare($checkSql);
+    $checkStmt->bind_param("i", $userId);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+    $checkRow = $checkResult->fetch_assoc();
+    
+    // If no streak record exists, create one
+    if ($checkRow['count'] == 0) {
+        $insertSql = "INSERT INTO user_streaks (user_id, current_streak, longest_streak) VALUES (?, 0, 0)";
+        $insertStmt = $conn->prepare($insertSql);
+        $insertStmt->bind_param("i", $userId);
+        $insertStmt->execute();
+    }
     
     $sql = "SELECT * FROM user_streaks WHERE user_id = ?";
     $stmt = $conn->prepare($sql);
@@ -495,6 +671,12 @@ function addUserXP($userId, $xpAmount) {
             $updateStmt->bind_param("ii", $newXP, $userId);
             $updateStmt->execute();
         }
+    } else {
+        // Create new stats record if none exists
+        $insertSql = "INSERT INTO user_stats (user_id, xp, level) VALUES (?, ?, 1)";
+        $insertStmt = $conn->prepare($insertSql);
+        $insertStmt->bind_param("ii", $userId, $xpAmount);
+        $insertStmt->execute();
     }
 }
 
@@ -502,14 +684,31 @@ function addUserXP($userId, $xpAmount) {
 function updateUserStats($userId, $score, $correctAnswers, $totalQuestions) {
     global $conn;
     
-    $sql = "UPDATE user_stats SET 
-            total_games_played = total_games_played + 1,
-            total_questions_answered = total_questions_answered + ?,
-            correct_answers = correct_answers + ?
-            WHERE user_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iii", $totalQuestions, $correctAnswers, $userId);
-    $stmt->execute();
+    // Check if user has stats record
+    $checkSql = "SELECT COUNT(*) as count FROM user_stats WHERE user_id = ?";
+    $checkStmt = $conn->prepare($checkSql);
+    $checkStmt->bind_param("i", $userId);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+    $checkRow = $checkResult->fetch_assoc();
+    
+    // If no stats record exists, create one
+    if ($checkRow['count'] == 0) {
+        $insertSql = "INSERT INTO user_stats (user_id, xp, level, total_games_played, total_questions_answered, correct_answers) 
+                     VALUES (?, 0, 1, 1, ?, ?)";
+        $insertStmt = $conn->prepare($insertSql);
+        $insertStmt->bind_param("iii", $userId, $totalQuestions, $correctAnswers);
+        $insertStmt->execute();
+    } else {
+        $sql = "UPDATE user_stats SET 
+                total_games_played = total_games_played + 1,
+                total_questions_answered = total_questions_answered + ?,
+                correct_answers = correct_answers + ?
+                WHERE user_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iii", $totalQuestions, $correctAnswers, $userId);
+        $stmt->execute();
+    }
 }
 
 // Save user's game progress
