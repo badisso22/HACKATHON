@@ -161,10 +161,34 @@ if ($hour < 12) {
     $greeting = "Good evening";
 }
 
+// Replace this section:
 // Mock user data - in a real app, this would come from your database
-$first_name = 'Mehdi';
-$selected_language = 'Spanish';
-$user_level = 1;
+$user_id = $_SESSION['user_id'];
+
+$stmt = $conn->prepare("
+    SELECT u.username, u.onboarding_complete, uo.selected_language, uo.daily_goal, uo.proficiency_level,
+           l.first_name, l.last_name, COALESCE(us.level, 1) as user_level
+    FROM users u 
+    LEFT JOIN user_onboarding uo ON u.user_ID = uo.user_ID 
+    LEFT JOIN learner l ON u.user_ID = l.user_ID
+    LEFT JOIN user_stats us ON u.user_ID = us.user_id
+    WHERE u.user_ID = ?
+");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    header("Location: ../Login/signin.php");
+    exit();
+}
+
+$user = $result->fetch_assoc();
+
+// Get user data from the database result
+$first_name = $user['first_name'] ?? 'User';
+$selected_language = $user['selected_language'] ?? 'English';
+$user_level = $user['user_level'] ?? 1;
 
 // Function to get flag emoji based on language
 function getLanguageFlag($language) {
@@ -730,7 +754,7 @@ function getLanguageFlag($language) {
             <nav class="sidebar-nav">
                 <ul>
                     <li class="nav-item">
-                        <a href="dashboard.php">
+                        <a href="../Dashboard/dashboard.php">
                             <i class="fas fa-home"></i>
                             Dashboard
                         </a>
