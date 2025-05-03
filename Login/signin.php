@@ -4,7 +4,6 @@ require_once '../Configurations/db.php';
 
 // Check if user is already logged in
 if (isset($_SESSION['user_id'])) {
-    // Redirect to check_onboarding to determine next step
     header("Location: check_onboarding.php");
     exit();
 }
@@ -13,40 +12,37 @@ $error = '';
 
 // Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'] ?? '';
+    $identifier = $_POST['identifier'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    if (empty($email) || empty($password)) {
-        $error = "Please enter both email and password.";
+    if (empty($identifier) || empty($password)) {
+        $error = "Please enter both username/email and password.";
     } else {
-        // Prepare SQL statement to prevent SQL injection
-        $stmt = $conn->prepare("SELECT user_ID, username, password FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
+        // Check if identifier is an email or username
+        $stmt = $conn->prepare("SELECT user_ID, username, password FROM users WHERE email = ? OR username = ?");
+        $stmt->bind_param("ss", $identifier, $identifier);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
-            
-            // Verify password
+
             if (password_verify($password, $user['password'])) {
-                // Password is correct, start a new session
                 session_regenerate_id();
                 $_SESSION['user_id'] = $user['user_ID'];
                 $_SESSION['username'] = $user['username'];
-                
-                // Redirect to check onboarding status
                 header("Location: check_onboarding.php");
                 exit();
             } else {
-                $error = "Invalid email or password.";
+                $error = "Invalid username/email or password.";
             }
         } else {
-            $error = "Invalid email or password.";
+            $error = "Invalid username/email or password.";
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,10 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" required placeholder="your@email.com">
+          <label for="identifier">Username or Email</label>
+          <input type="text" id="identifier" name="identifier" required placeholder="Enter username or email">
         </div>
-
         <div class="form-group">
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required placeholder="Enter your password">
