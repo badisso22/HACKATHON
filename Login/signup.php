@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gender = $_POST['gender'] ?? '';
     $phone = $_POST['phone'] ?? '';
     $address = $_POST['address'] ?? '';
+    $username = $_POST['username'] ?? '';
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
 
@@ -35,6 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
+          // Check if username already exists
+        $stmt = $conn->prepare("SELECT user_ID FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $error = "Username already taken. Please choose a different one.";
+        }
+
 
         if ($result->num_rows > 0) {
             $error = "Email already exists. Please use a different email or sign in.";
@@ -43,8 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->begin_transaction();
 
             try {
-                // Generate username from firstname and lastname
-                $username = strtolower($firstname . '.' . $lastname) . rand(1000, 9999);
                 
                 // Hash password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -159,6 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group">
           <label for="address">Address</label>
           <input type="text" id="address" name="address" required placeholder="Enter your address">
+        </div>
+
+        <div class="form-group">
+          <label for="username">username</label>
+          <input type="text" id="username" name="username" required placeholder="Enter your username">
         </div>
 
         <div class="form-group">
