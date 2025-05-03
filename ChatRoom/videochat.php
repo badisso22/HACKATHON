@@ -95,8 +95,8 @@ debug_log("Channel name generated: $channel_name");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chat | Mura</title>
-    <script src="https://cdn.agora.io/sdk/web/AgoraRTC_N-4.17.2.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+    <!-- FIX: Use only one version of the Agora SDK (the latest stable version) -->
+    <script src="https://cdn.agora.io/sdk/release/AgoraRTC_N-4.19.3.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -557,9 +557,46 @@ debug_log("Channel name generated: $channel_name");
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
+        
+        <!-- FIX: Add debug toggle button for troubleshooting -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="toggle-debug" style="background-color: #f1f1f1; color: #333; font-size: 12px; padding: 5px 10px;">
+                Show Debug Info
+            </button>
+        </div>
+        
+        <div id="debug-panel" class="debug-section" style="display: none;">
+            <h3>Debug Information</h3>
+            <div id="debug-info" class="debug-info"></div>
+        </div>
     </div>
 
     <script>
+        // Debug logging function
+        function logDebug(message) {
+            console.log(message);
+            const debugInfo = document.getElementById('debug-info');
+            if (debugInfo) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                debugInfo.appendChild(logEntry);
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+            }
+        }
+        
+        // Toggle debug panel
+        document.getElementById('toggle-debug').addEventListener('click', function() {
+            const debugPanel = document.getElementById('debug-panel');
+            if (debugPanel.style.display === 'none') {
+                debugPanel.style.display = 'block';
+                this.textContent = 'Hide Debug Info';
+            } else {
+                debugPanel.style.display = 'none';
+                this.textContent = 'Show Debug Info';
+            }
+        });
+
         // Status message function
         function showStatus(message, isError = false) {
             const statusElement = document.getElementById('status-message');
@@ -570,25 +607,18 @@ debug_log("Channel name generated: $channel_name");
             } else {
                 statusElement.classList.add('success-message');
             }
+            logDebug(message);
         }
 
-        // Collapsible functionality
-        const coll = document.getElementsByClassName("collapsible");
-        for (let i = 0; i < coll.length; i++) {
-            coll[i].addEventListener("click", function() {
-                this.classList.toggle("active");
-                const content = this.nextElementSibling;
-                if (content.style.maxHeight) {
-                    content.style.maxHeight = null;
-                } else {
-                    content.style.maxHeight = content.scrollHeight + "px";
-                }
-            });
+        // FIX: Check if Agora SDK is loaded properly
+        function isAgoraLoaded() {
+            return typeof AgoraRTC !== 'undefined';
         }
 
         // Agora client setup
         const APP_ID = "fca49702e5d64960a1cfd5dc860decc1"; // Your Agora App ID
         const CHANNEL = "<?php echo $channel_name; ?>";
+        // FIX: Use a temporary token for testing - in production, implement a token server
         const TOKEN = null; // Use null for testing or provide a token for production
 
         let client = null;
@@ -602,7 +632,45 @@ debug_log("Channel name generated: $channel_name");
         // Initialize the Agora client
         async function initializeAgoraClient() {
             try {
-                logDebug("Initializing Agora client");
+                // FIX: Check if Agora SDK is loaded
+                if (!isAgoraLoaded()) {
+                    logDebug("Agora SDK not loaded. Waiting...");
+                    showStatus("Loading video chat components...");
+                    
+                    // Wait for SDK to load (max 5 seconds)
+                    let attempts = 0;
+                    const maxAttempts = 10;
+                    
+                    return new Promise((resolve, reject) => {
+                        const checkInterval = setInterval(() => {
+                            attempts++;
+                            if (isAgoraLoaded()) {
+                                clearInterval(checkInterval);
+                                logDebug("Agora SDK loaded successfully");
+                                resolve(createClient());
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(checkInterval);
+                                const error = new Error("Failed to load Agora SDK after multiple attempts");
+                                logDebug(error.message);
+                                reject(error);
+                            }
+                        }, 500);
+                    });
+                } else {
+                    return createClient();
+                }
+            } catch (error) {
+                logDebug(`Error initializing Agora client: ${error.message}`);
+                showStatus(`Failed to initialize video chat: ${error.message}`, true);
+                return false;
+            }
+        }
+        
+        // Create and configure the Agora client
+        function createClient() {
+            logDebug("Creating Agora client");
+            try {
+                // FIX: Use a more robust client creation with error handling
                 client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
                 
                 // Register event handlers
@@ -612,11 +680,22 @@ debug_log("Channel name generated: $channel_name");
                 client.on("user-left", handleUserLeft);
                 client.on("exception", handleException);
                 
-                logDebug("Agora client initialized successfully");
+                // FIX: Add connection state change handler
+                client.on("connection-state-change", (curState, prevState) => {
+                    logDebug(`Connection state changed from ${prevState} to ${curState}`);
+                    
+                    if (curState === "DISCONNECTED") {
+                        showStatus("Disconnected from video chat server", true);
+                    } else if (curState === "CONNECTED") {
+                        showStatus("Connected to video chat server");
+                    }
+                });
+                
+                logDebug("Agora client created successfully");
                 return true;
             } catch (error) {
-                logDebug(`Error initializing Agora client: ${error.message}`);
-                showStatus(`Failed to initialize video chat: ${error.message}`, true);
+                logDebug(`Error creating Agora client: ${error.message}`);
+                showStatus(`Failed to create video chat client: ${error.message}`, true);
                 return false;
             }
         }
@@ -637,26 +716,55 @@ debug_log("Channel name generated: $channel_name");
                     }
                 }
                 
+                // FIX: Check for browser permissions before joining
+                try {
+                    logDebug("Checking media permissions");
+                    await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    logDebug("Media permissions granted");
+                } catch (permissionError) {
+                    logDebug(`Permission error: ${permissionError.message}`);
+                    showStatus(`Please allow camera and microphone access to use video chat: ${permissionError.message}`, true);
+                    document.getElementById('start-call-btn').disabled = false;
+                    return;
+                }
+                
                 // Join the channel
                 logDebug(`Joining channel: ${CHANNEL}`);
-                const uid = await client.join(APP_ID, CHANNEL, TOKEN, null);
-                logDebug(`Joined channel with UID: ${uid}`);
+                try {
+                    const uid = await client.join(APP_ID, CHANNEL, TOKEN, null);
+                    logDebug(`Joined channel with UID: ${uid}`);
+                } catch (joinError) {
+                    logDebug(`Error joining channel: ${joinError.message}`);
+                    showStatus(`Failed to join video chat: ${joinError.message}`, true);
+                    document.getElementById('start-call-btn').disabled = false;
+                    return;
+                }
                 
                 // Create and publish local tracks
                 logDebug("Creating local tracks");
-                [localTracks.audioTrack, localTracks.videoTrack] = await Promise.all([
-                    AgoraRTC.createMicrophoneAudioTrack(),
-                    AgoraRTC.createCameraVideoTrack()
-                ]);
-                
-                // Play local video track
-                localTracks.videoTrack.play("local-video");
-                document.querySelector("#local-video .video-placeholder").style.display = "none";
-                
-                // Publish local tracks
-                logDebug("Publishing local tracks");
-                await client.publish(Object.values(localTracks));
-                logDebug("Published local tracks successfully");
+                try {
+                    [localTracks.audioTrack, localTracks.videoTrack] = await Promise.all([
+                        AgoraRTC.createMicrophoneAudioTrack(),
+                        AgoraRTC.createCameraVideoTrack()
+                    ]);
+                    
+                    // Play local video track
+                    localTracks.videoTrack.play("local-video");
+                    document.querySelector("#local-video .video-placeholder").style.display = "none";
+                    
+                    // Publish local tracks
+                    logDebug("Publishing local tracks");
+                    await client.publish(Object.values(localTracks));
+                    logDebug("Published local tracks successfully");
+                } catch (mediaError) {
+                    logDebug(`Error with media: ${mediaError.message}`);
+                    showStatus(`Failed to access camera or microphone: ${mediaError.message}`, true);
+                    
+                    // Clean up if there was an error
+                    await leaveCall();
+                    document.getElementById('start-call-btn').disabled = false;
+                    return;
+                }
                 
                 // Update UI
                 showStatus("Connected to video chat. Waiting for others to join...");
@@ -679,7 +787,11 @@ debug_log("Channel name generated: $channel_name");
                 if (localTracks.videoTrack) {
                     localTracks.videoTrack.close();
                 }
-                await client?.leave();
+                try {
+                    await client?.leave();
+                } catch (leaveError) {
+                    logDebug(`Error during cleanup: ${leaveError.message}`);
+                }
             }
         }
 
@@ -827,29 +939,44 @@ debug_log("Channel name generated: $channel_name");
 
         // Check for browser support
         function checkBrowserSupport() {
-            if (!AgoraRTC.checkSystemRequirements()) {
-                logDebug("Browser does not support Agora RTC");
-                showStatus("Your browser does not fully support video chat functionality. Please use Chrome, Firefox, or Safari for the best experience.", true);
+            // FIX: More robust browser support check
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                logDebug("Browser does not support getUserMedia");
+                showStatus("Your browser does not support video chat. Please use Chrome, Firefox, or Safari.", true);
                 return false;
             }
+            
+            // Check if Agora SDK is loaded
+            if (!isAgoraLoaded()) {
+                logDebug("Agora SDK not loaded");
+                showStatus("Video chat components failed to load. Please refresh the page and try again.", true);
+                return false;
+            }
+            
             return true;
         }
 
         // Initialize when page loads
         window.addEventListener('load', () => {
             logDebug("Page loaded");
-            checkBrowserSupport();
             
-            // Initialize Agora client
-            initializeAgoraClient();
-            
-            // Warn before leaving if call is active
-            window.addEventListener('beforeunload', (e) => {
-                if (isCallActive) {
-                    e.preventDefault();
-                    e.returnValue = 'You are currently in a video call. Are you sure you want to leave?';
-                }
-            });
+            // FIX: Add a small delay to ensure everything is loaded
+            setTimeout(() => {
+                checkBrowserSupport();
+                
+                // Initialize Agora client
+                initializeAgoraClient().catch(error => {
+                    logDebug(`Failed to initialize: ${error.message}`);
+                });
+                
+                // Warn before leaving if call is active
+                window.addEventListener('beforeunload', (e) => {
+                    if (isCallActive) {
+                        e.preventDefault();
+                        e.returnValue = 'You are currently in a video call. Are you sure you want to leave?';
+                    }
+                });
+            }, 1000);
         });
     </script>
 </body>
