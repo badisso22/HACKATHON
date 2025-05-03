@@ -1006,7 +1006,7 @@ body {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Lessons/lessons.php">
                             <i class="fas fa-book-open"></i>
                             Lessons
                         </a>
@@ -1036,7 +1036,7 @@ body {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Achievements/achievements.php">
                             <i class="fas fa-trophy"></i>
                             Achievements
                         </a>
@@ -1048,7 +1048,7 @@ body {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Settings/settings.php">
                             <i class="fas fa-cog"></i>
                             Settings
                         </a>
