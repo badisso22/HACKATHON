@@ -1,6 +1,17 @@
 <?php
 require_once '../Configurations/db.php';
-requireLogin(); // Ensure user is logged in
+
+// Define the requireLogin function
+function requireLogin() {
+    session_start(); 
+    if (!isset($_SESSION['user_id'])) { 
+        header("Location: ../Login/signin.php"); // Redirect to login page if not logged in
+        exit(); 
+    }
+}
+
+// Call the function to check login
+requireLogin();
 
 header('Content-Type: application/json');
 
