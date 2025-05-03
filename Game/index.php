@@ -1,17 +1,6 @@
 <?php
 require_once '../Configurations/db.php';
-
-// Define the requireLogin function
-function requireLogin() {
-    session_start(); 
-    if (!isset($_SESSION['user_id'])) { 
-        header("Location: ../Login/signin.php"); // Redirect to login page if not logged in
-        exit(); 
-    }
-}
-
-// Call the function to check login
-requireLogin();
+requireLogin(); // Ensure user is logged in
 
 // Get user info
 $userId = $_SESSION['user_id'];
@@ -34,11 +23,11 @@ $username = $_SESSION['username'] ?? 'Player';
   <header>
     <div class="logo-title">
       <div class="logo">
-        <img src="../image/mura.png" alt="Mura Logo" class="game-logo">
+        <img src="mura-logo.png" alt="Mura Logo" class="game-logo">
       </div>
       <h1>Mura — Language Combat</h1>
     </div>
-    <a href="../Dashboard/dashboard.php" class="leave-button">Back to Dashboard</a>
+    <button id="leave-game" class="leave-button">Leave Game</button>
   </header>
   
   <!-- Game Screen -->
