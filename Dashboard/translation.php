@@ -254,7 +254,7 @@ function getLanguageFlag($language) {
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            background-color: #b39ddb;
+
         }
 
         .mura-logo img {
@@ -721,7 +721,9 @@ function getLanguageFlag($language) {
         <div class="sidebar">
             <div class="logo">
                 <div class="logo-container">
-                    <div class="mura-logo">🌎</div>
+                    <div class="mura-logo">
+                        <img src="../image/mura.png" alt="Mura Logo">
+                    </div>
                     <h1>Mura</h1>
                 </div>
             </div>
@@ -758,7 +760,7 @@ function getLanguageFlag($language) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../ChatRoom/videochat.php">
                             <i class="fas fa-video"></i>
                             Video Chat
                         </a>
@@ -770,7 +772,7 @@ function getLanguageFlag($language) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Community/community.php">
                             <i class="fas fa-users"></i>
                             Community
                         </a>
