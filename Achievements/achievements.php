@@ -2,7 +2,7 @@
 session_start();
 require_once '../Configurations/db.php';
 if (!isset($_SESSION['user_id'])) {
-    header("Location: Login/signin.php");
+    header("Location: ../Login/signin.php");
     exit();
 }
 
@@ -24,7 +24,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    header("Location: Login/signin.php");
+    header("Location: ../Login/signin.php");
     exit();
 }
 
@@ -884,7 +884,7 @@ $user_level = $user['level'] ?? 1;
             <div class="logo">
                 <div class="logo-container">
                     <div class="mura-logo">
-                        <img src="image/mura.png" alt="Mura Logo">
+                        <img src="../image/mura.png" alt="Mura Logo">
                     </div>
                     <h1>Mura</h1>
                 </div>
@@ -892,55 +892,55 @@ $user_level = $user['level'] ?? 1;
             <nav class="sidebar-nav">
                 <ul>
                     <li class="nav-item">
-                        <a href="Dashboard/dashboard.php">
+                        <a href="../Dashboard/dashboard.php">
                             <i class="fas fa-home"></i>
                             Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Lessons/lessons.php">
                             <i class="fas fa-book-open"></i>
                             Lessons
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="chatai/chatai.php">
+                        <a href="../Chatai/chatai.php">
                             <i class="fas fa-robot"></i>
                             TutorBot
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="Game/index.php">
+                        <a href="../Game/index.php">
                             <i class="fas fa-gamepad"></i>
                             Language Combat
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="Dashboard/translation.php">
+                        <a href="../Dashboard/translation.php">
                             <i class="fas fa-language"></i>
                             Translation
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="ChatRoom/videochat.php">
+                        <a href="../ChatRoom/videochat.php">
                             <i class="fas fa-video"></i>
                             Video Chat
                         </a>
                     </li>
                     <li class="nav-item active">
-                        <a href="achievements.php">
+                        <a href="../Achievements/achievements.php">
                             <i class="fas fa-trophy"></i>
                             Achievements
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="community/community.php">
+                        <a href="../Community/community.php">
                             <i class="fas fa-users"></i>
                             Community
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="Settings/settings.php">
+                        <a href="../Settings/settings.php">
                             <i class="fas fa-cog"></i>
                             Settings
                         </a>
@@ -948,7 +948,7 @@ $user_level = $user['level'] ?? 1;
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <a href="Dashboard/logout.php" class="logout-btn">
+                <a href="../Dashboard/logout.php" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
                 </a>
