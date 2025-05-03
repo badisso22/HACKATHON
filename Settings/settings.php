@@ -845,7 +845,7 @@ function getLanguageFlag($language) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Lessons/lessons.php">
                             <i class="fas fa-book-open"></i>
                             Lessons
                         </a>
@@ -875,7 +875,7 @@ function getLanguageFlag($language) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#">
+                        <a href="../Achievements/achievements.php">
                             <i class="fas fa-trophy"></i>
                             Achievements
                         </a>
