@@ -154,6 +154,52 @@ That's great! English is a fascinating language. What aspects of English would y
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/chatai.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+.navigation-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  z-index: 10;
+  position: relative;
+}
+
+.dashboard-btn, .back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  background: #9d4edd;
+  color: white;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-btn:hover, .back-btn:hover {
+  background: #7b2cbf;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-btn i, .back-btn i {
+  margin-right: 8px;
+}
+
+@media (max-width: 480px) {
+  .navigation-buttons {
+    flex-direction: column;
+    width: 100%;
+    max-width: 600px;
+  }
+  
+  .dashboard-btn, .back-btn {
+    width: 100%;
+  }
+}
+</style>
 </head>
 <body>
   <div id="backgroundWords" class="background-words-container"></div>
@@ -195,6 +241,11 @@ That's great! English is a fascinating language. What aspects of English would y
         <li>Try using a different network connection if possible</li>
       </ul>
     </div>
+  </div>
+  <div class="navigation-buttons">
+    <a href="../Dashboard/dashboard.php" class="dashboard-btn" id="dashboard-button">
+      <i class="fas fa-home"></i> Back to Dashboard
+    </a>
   </div>
 
   <script>
