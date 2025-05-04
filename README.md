@@ -63,16 +63,12 @@ This project challenged me to manage time, collaborate, and deliver a fully func
 
 ---
 
-## 📸 Screenshots
-
----
-
 ## 🙌 Contributing
 
 We welcome contributions to help make Mura even better! 
 
 ### 💡 Ideas and Feedback
-- If you have a feature idea, bug fix, or improvement, feel free to let me know
+- If you have a feature idea, bug fix, or improvement, feel free to let me know!
 - All suggestions are welcome — especially from language learners and educators!
 - PS : the project isn't fully done :p.
 
