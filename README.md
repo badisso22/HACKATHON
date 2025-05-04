@@ -1,5 +1,5 @@
 # 🌸 Mura — AI-Powered Language Learning Platform 
-![MURA-LOGO](mura.png)
+![MURA-LOGO](image/mura.png)
 
 
 Welcome to **Mura**, an all-in-one, immersive, and gamified language learning platform designed to make mastering a new language fun, social, and effective. Whether you're a beginner or brushing up your fluency, Mura has you covered with interactive tools, intelligent feedback, and a vibrant community of learners.
