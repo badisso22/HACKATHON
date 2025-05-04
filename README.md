@@ -59,7 +59,7 @@ This project challenged me to manage time, collaborate, and deliver a fully func
 
 - **Frontend**: HTML, CSS, JavaScript
 - **Backend**: PHP
-- **APIs**: Gemini (AI Chatbot), Agora (Video Chat)
+- **APIs**: Gemini (AI Chatbot), Agora (Video Chat), Google API (apparently i shouldn't??? idk)
 - **Database**: MySQL
 - **Tools**: phpMyAdmin, Visual Studio Code, GitHub
 
