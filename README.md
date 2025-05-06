@@ -43,7 +43,7 @@ Mura is built for modern browsers with a mobile-first design approach. Whether o
 
 > **Hackathon Achievement**: 🥈 **2nd Place Winner**
 
-Mura was built during my **first hackathon** experience. I was proud to lead a team of motivated developers, handling the majority of the work including:
+Mura was built during my **first hackathon** experience. I was proud to lead a team of "motivated" developers, handling the majority of the work including:
 
 - System architecture
 - Backend logic
