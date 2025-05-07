@@ -3,17 +3,13 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();
 require_once '../Configurations/db.php';
-require_once '../hide/hide.php'; // Updated path to the renamed file
+require_once '../hide/hide.php'; 
 
-// Get Agora App ID from environment variables
-$agora_app_id = getEnv('AGORA_APP_ID', ''); // Second parameter is default value if not found
+$agora_app_id = getEnvVar('AGORA_APP_ID', ''); 
 
-// Check if Agora App ID is set
 if (empty($agora_app_id)) {
     error_log("Agora App ID not found in environment variables");
 }
-
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../Login/signin.php");
     exit();
@@ -22,15 +18,12 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $debug_info = []; // For storing debug information
 
-// Helper function to log debug info
 function debug_log($message) {
     global $debug_info;
     $debug_info[] = date('H:i:s') . ': ' . $message;
 }
 
 debug_log("Script started with user ID: $user_id");
-
-// Fetch user data including level, streak, and language
 try {
     $stmt = $conn->prepare("
         SELECT u.username, us.level, ust.current_streak, uo.selected_language, uo.proficiency_level
@@ -66,7 +59,6 @@ try {
     
 } catch (Exception $e) {
     debug_log("Error: " . $e->getMessage());
-    // Continue with default values if there's an error
     $username = 'User';
     $user_level = 1;
     $streak = 0;
@@ -104,7 +96,6 @@ debug_log("Channel name generated: $channel_name");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chat | Mura</title>
-    <!-- FIX: Use only one version of the Agora SDK (the latest stable version) -->
     <script src="https://cdn.agora.io/sdk/release/AgoraRTC_N-4.19.3.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -566,8 +557,6 @@ debug_log("Channel name generated: $channel_name");
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
-        
-        <!-- FIX: Add debug toggle button for troubleshooting -->
         <div style="text-align: center; margin-top: 20px;">
             <button id="toggle-debug" style="background-color: #f1f1f1; color: #333; font-size: 12px; padding: 5px 10px;">
                 Show Debug Info
@@ -593,8 +582,6 @@ debug_log("Channel name generated: $channel_name");
                 debugInfo.scrollTop = debugInfo.scrollHeight;
             }
         }
-        
-        // Toggle debug panel
         document.getElementById('toggle-debug').addEventListener('click', function() {
             const debugPanel = document.getElementById('debug-panel');
             if (debugPanel.style.display === 'none') {
@@ -605,8 +592,6 @@ debug_log("Channel name generated: $channel_name");
                 this.textContent = 'Show Debug Info';
             }
         });
-
-        // Status message function
         function showStatus(message, isError = false) {
             const statusElement = document.getElementById('status-message');
             statusElement.textContent = message;
@@ -618,16 +603,11 @@ debug_log("Channel name generated: $channel_name");
             }
             logDebug(message);
         }
-
-        // FIX: Check if Agora SDK is loaded properly
         function isAgoraLoaded() {
             return typeof AgoraRTC !== 'undefined';
         }
-
-        // Agora client setup
         const APP_ID = "<?php echo $agora_app_id; ?>"; // Get Agora App ID from PHP
         const CHANNEL = "<?php echo $channel_name; ?>";
-        // FIX: Use a temporary token for testing - in production, implement a token server
         const TOKEN = null; // Use null for testing or provide a token for production
 
         let client = null;
@@ -641,7 +621,7 @@ debug_log("Channel name generated: $channel_name");
         // Initialize the Agora client
         async function initializeAgoraClient() {
             try {
-                // FIX: Check if Agora SDK is loaded
+                //Check if Agora SDK is loaded
                 if (!isAgoraLoaded()) {
                     logDebug("Agora SDK not loaded. Waiting...");
                     showStatus("Loading video chat components...");
@@ -679,7 +659,7 @@ debug_log("Channel name generated: $channel_name");
         function createClient() {
             logDebug("Creating Agora client");
             try {
-                // FIX: Use a more robust client creation with error handling
+                //Use a more robust client creation with error handling
                 client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
                 
                 // Register event handlers
@@ -689,7 +669,7 @@ debug_log("Channel name generated: $channel_name");
                 client.on("user-left", handleUserLeft);
                 client.on("exception", handleException);
                 
-                // FIX: Add connection state change handler
+                //Add connection state change handler
                 client.on("connection-state-change", (curState, prevState) => {
                     logDebug(`Connection state changed from ${prevState} to ${curState}`);
                     
@@ -725,7 +705,7 @@ debug_log("Channel name generated: $channel_name");
                     }
                 }
                 
-                // FIX: Check for browser permissions before joining
+                //Check for browser permissions before joining
                 try {
                     logDebug("Checking media permissions");
                     await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
