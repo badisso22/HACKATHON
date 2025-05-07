@@ -1,0 +1,28 @@
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Cache files
+*.cache
+
+# User uploaded content
+/uploads/*
+!/uploads/.gitkeep
+
+# Composer dependencies
+/vendor/
+
+# Node modules
+/node_modules/
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS specific files
+.DS_Store
+Thumbs.db
