@@ -3,6 +3,15 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();
 require_once '../Configurations/db.php';
+require_once '../hide/hide.php'; // Updated path to the renamed file
+
+// Get Agora App ID from environment variables
+$agora_app_id = getEnv('AGORA_APP_ID', ''); // Second parameter is default value if not found
+
+// Check if Agora App ID is set
+if (empty($agora_app_id)) {
+    error_log("Agora App ID not found in environment variables");
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -616,7 +625,7 @@ debug_log("Channel name generated: $channel_name");
         }
 
         // Agora client setup
-        const APP_ID = "fca49702e5d64960a1cfd5dc860decc1"; // Your Agora App ID
+        const APP_ID = "<?php echo $agora_app_id; ?>"; // Get Agora App ID from PHP
         const CHANNEL = "<?php echo $channel_name; ?>";
         // FIX: Use a temporary token for testing - in production, implement a token server
         const TOKEN = null; // Use null for testing or provide a token for production
